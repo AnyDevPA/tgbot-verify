@@ -163,8 +163,18 @@ def generate_image(first_name, last_name, school_id='999'):
         return make_it_look_real(ss)
     except Exception as e:
         raise Exception(f"Error: {e}")
+        
+# --- FUNCIONES DE COMPATIBILIDAD (NO BORRAR) ---
+# El bot necesita estas funciones aunque no las usemos realmente
+def generate_psu_id():
+    return "123456789"
+
+def generate_psu_email(first_name, last_name):
+    return f"{first_name}.{last_name}@asu.edu"
+# -----------------------------------------------
 
 if __name__ == '__main__':
     # Test
     with open("test_asu_transcript.jpg", "wb") as f:
         f.write(generate_image("Brian", "Test"))
+
