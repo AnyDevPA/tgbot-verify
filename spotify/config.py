@@ -1,15 +1,29 @@
 # SheerID 验证配置文件
 
 # SheerID API 配置
-PROGRAM_ID = '695f63e8f44326081137a4e8'
+PROGRAM_ID = '695f63e8f44326081137a4e8' 
 SHEERID_BASE_URL = 'https://services.sheerid.com'
 MY_SHEERID_URL = 'https://my.sheerid.com'
 
 # 文件大小限制
 MAX_FILE_SIZE = 1 * 1024 * 1024  # 1MB
 
-# 学校配置 - Pennsylvania State University 多校区
+# 学校配置
 SCHOOLS = {
+    # --- AGREGADO: UNAM (MEXICO) ---
+    '5032': {  # <--- ESTE ES EL ID, CONFIRMA SI ES 5032 EN TU NAVEGADOR
+        'id': 5032,
+        'idExtended': '5032',
+        'name': 'Universidad Nacional Autónoma De México (UNAM)',
+        'city': 'Coyoacán',
+        'state': 'CDMX',
+        'country': 'MX',
+        'type': 'UNIVERSITY',
+        'domain': 'UNAM.MX',
+        'latitude': 19.332,
+        'longitude': -99.186
+    },
+    # -------------------------------
     '2565': {
         'id': 2565,
         'idExtended': '2565',
@@ -21,117 +35,8 @@ SCHOOLS = {
         'domain': 'PSU.EDU',
         'latitude': 40.798214,
         'longitude': -77.85991
-    },
-    '651379': {
-        'id': 651379,
-        'idExtended': '651379',
-        'name': 'Pennsylvania State University-World Campus',
-        'city': 'University Park',
-        'state': 'PA',
-        'country': 'US',
-        'type': 'UNIVERSITY',
-        'domain': 'PSU.EDU',
-        'latitude': 40.832783,
-        'longitude': -77.84159
-    },
-    '8387': {
-        'id': 8387,
-        'idExtended': '8387',
-        'name': 'Pennsylvania State University-Penn State Harrisburg',
-        'city': 'Middletown',
-        'state': 'PA',
-        'country': 'US',
-        'type': 'UNIVERSITY',
-        'domain': 'PSU.EDU',
-        'latitude': 40.204082,
-        'longitude': -76.74168
-    },
-    '8382': {
-        'id': 8382,
-        'idExtended': '8382',
-        'name': 'Pennsylvania State University-Penn State Altoona',
-        'city': 'Altoona',
-        'state': 'PA',
-        'country': 'US',
-        'type': 'UNIVERSITY',
-        'domain': 'PSU.EDU',
-        'latitude': 40.54092,
-        'longitude': -78.40825
-    },
-    '8396': {
-        'id': 8396,
-        'idExtended': '8396',
-        'name': 'Pennsylvania State University-Penn State Berks',
-        'city': 'Reading',
-        'state': 'PA',
-        'country': 'US',
-        'type': 'UNIVERSITY',
-        'domain': 'PSU.EDU',
-        'latitude': 40.359947,
-        'longitude': -75.97615
-    },
-    '8379': {
-        'id': 8379,
-        'idExtended': '8379',
-        'name': 'Pennsylvania State University-Penn State Brandywine',
-        'city': 'Media',
-        'state': 'PA',
-        'country': 'US',
-        'type': 'UNIVERSITY',
-        'domain': 'PSU.EDU',
-        'latitude': 39.92638,
-        'longitude': -75.44698
-    },
-    '2560': {
-        'id': 2560,
-        'idExtended': '2560',
-        'name': 'Pennsylvania State University-College of Medicine',
-        'city': 'Hershey',
-        'state': 'PA',
-        'country': 'US',
-        'type': 'UNIVERSITY',
-        'domain': 'PSU.EDU',
-        'latitude': 40.264244,
-        'longitude': -76.67408
-    },
-    '650600': {
-        'id': 650600,
-        'idExtended': '650600',
-        'name': 'Pennsylvania State University-Penn State Lehigh Valley',
-        'city': 'Center Valley',
-        'state': 'PA',
-        'country': 'US',
-        'type': 'UNIVERSITY',
-        'domain': 'PSU.EDU',
-        'latitude': 40.559208,
-        'longitude': -75.402504
-    },
-    '8388': {
-        'id': 8388,
-        'idExtended': '8388',
-        'name': 'Pennsylvania State University-Penn State Hazleton',
-        'city': 'Hazleton',
-        'state': 'PA',
-        'country': 'US',
-        'type': 'UNIVERSITY',
-        'domain': 'PSU.EDU',
-        'latitude': 40.98396,
-        'longitude': -76.03106
-    },
-    '8394': {
-        'id': 8394,
-        'idExtended': '8394',
-        'name': 'Pennsylvania State University-Penn State Worthington Scranton',
-        'city': 'Dunmore',
-        'state': 'PA',
-        'country': 'US',
-        'type': 'UNIVERSITY',
-        'domain': 'PSU.EDU',
-        'latitude': 41.440258,
-        'longitude': -75.62058
     }
 }
 
-# 默认学校
-DEFAULT_SCHOOL_ID = '2565'
-
+# 默认学校 (CAMBIADO A UNAM)
+DEFAULT_SCHOOL_ID = '5032'
