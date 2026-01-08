@@ -3,6 +3,10 @@ import random
 from datetime import datetime
 from io import BytesIO
 import base64
+import numpy as np
+from PIL import Image, ImageFilter, ImageEnhance
+import io
+import random
 
 
 def generate_psu_id():
@@ -340,68 +344,73 @@ def generate_html(first_name, last_name, school_id='2565'):
     return html
 
 
+def make_it_look_real(image_bytes):
+    """
+    Toma una captura de pantalla perfecta (bytes) y la devuelve
+    como si fuera una foto tomada con un celular (JPEG con ruido).
+    """
+    # 1. Cargar la imagen desde la memoria
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    
+    # 2. Agregar RUIDO (Ese "granito" de las fotos con poca luz)
+    # Convertimos la imagen a una matriz de números
+    img_array = np.array(img)
+    # Generamos ruido aleatorio (el 15 es la intensidad, ajústalo si quieres más/menos)
+    noise = np.random.normal(0, 15, img_array.shape) 
+    # Sumamos el ruido a la imagen original
+    noisy_img = np.clip(img_array + noise, 0, 255).astype(np.uint8)
+    img = Image.fromarray(noisy_img)
+
+    # 3. Desenfocar ligeramente (Simula mal enfoque o movimiento)
+    img = img.filter(ImageFilter.GaussianBlur(radius=0.6))
+
+    # 4. Rotar un poquito (Nadie toma la foto perfectamente recta)
+    angle = random.uniform(-1.5, 1.5) # Rota entre -1.5 y 1.5 grados al azar
+    img = img.rotate(angle, resample=Image.BICUBIC, expand=True, fillcolor='white')
+
+    # 5. Ajustar brillo/contraste (Las pantallas reales no se ven tan planas)
+    enhancer = ImageEnhance.Brightness(img)
+    img = enhancer.enhance(0.95) # Un poquito más oscura
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(0.9)  # Un poco menos de contraste
+
+    # 6. Guardar como JPEG comprimido
+    output = io.BytesIO()
+    # quality=80 crea los artefactos de compresión típicos de WhatsApp/Android
+    img.save(output, format='JPEG', quality=80) 
+    
+    return output.getvalue()
+
+
 def generate_image(first_name, last_name, school_id='2565'):
     """
-    生成 Penn State LionPATH 截图 PNG
-
-    Args:
-        first_name: 名字
-        last_name: 姓氏
-        school_id: 学校 ID
-
-    Returns:
-        bytes: PNG 图片数据
+    Genera la captura de Penn State y le aplica el filtro de realismo.
     """
     try:
         from playwright.sync_api import sync_playwright
 
-        # 生成 HTML
+        # Generar HTML (Asegúrate de que la función generate_html exista arriba)
         html_content = generate_html(first_name, last_name, school_id)
 
-        # 使用 Playwright 截图（替代 Selenium）
+        # Usar Playwright para la captura base
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
+            # Viewport tipo laptop
             page = browser.new_page(viewport={'width': 1200, 'height': 900})
             page.set_content(html_content, wait_until='load')
-            page.wait_for_timeout(500)  # 等待样式加载
+            page.wait_for_timeout(500)  # Esperar estilos
+            
+            # Tomar la captura limpia
             screenshot_bytes = page.screenshot(type='png', full_page=True)
             browser.close()
 
-        return screenshot_bytes
+        # --- APLICAR EL FILTRO AQUI ---
+        print(f"Generando evidencia para: {first_name} {last_name}...")
+        final_image = make_it_look_real(screenshot_bytes)
+        
+        return final_image
 
     except ImportError:
-        raise Exception("需要安装 playwright: pip install playwright && playwright install chromium")
+        raise Exception("Necesitas instalar playwright: pip install playwright && playwright install chromium")
     except Exception as e:
-        raise Exception(f"生成图片失败: {str(e)}")
-
-
-if __name__ == '__main__':
-    # 测试代码
-    import sys
-    import io
-
-    # 修复 Windows 控制台编码问题
-    if sys.platform == 'win32':
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-
-    print("测试 PSU 图片生成...")
-
-    first_name = "John"
-    last_name = "Smith"
-
-    print(f"姓名: {first_name} {last_name}")
-    print(f"PSU ID: {generate_psu_id()}")
-    print(f"邮箱: {generate_psu_email(first_name, last_name)}")
-
-    try:
-        img_data = generate_image(first_name, last_name)
-
-        # 保存测试图片
-        with open('test_psu_card.png', 'wb') as f:
-            f.write(img_data)
-
-        print(f"✓ 图片生成成功! 大小: {len(img_data)} bytes")
-        print("✓ 已保存为 test_psu_card.png")
-
-    except Exception as e:
-        print(f"✗ 错误: {e}")
+        raise Exception(f"Fallo en generación de imagen: {str(e)}")
