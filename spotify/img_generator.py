@@ -12,15 +12,12 @@ except ImportError:
 
 def generate_html(first_name, last_name):
     """
-    Genera una Tira de Materias (Horario) de la UNAM - Estilo SIAE Clásico
+    Genera Tira de Materias UNAM corregida para pasar el filtro de nombre exacto.
     """
-    # Semestre actual UNAM (2026-2 es el próximo semestre típico para estas fechas)
     semestre = "2026-2"
-    
-    # Generar número de cuenta (9 dígitos)
     cuenta = f"31{random.randint(1000000, 9999999)}"
     
-    # Lista de materias con horarios realistas
+    # Materias
     materias = [
         {"clave": "1123", "gpo": "1105", "asignatura": "ÁLGEBRA SUPERIOR", "profesor": "DR. JORGE ALBERTO", "horario": "Lu Mi Vi 07:00-09:00", "salon": "A-101"},
         {"clave": "1124", "gpo": "1105", "asignatura": "CÁLCULO DIFERENCIAL", "profesor": "M.I. ROBERTO GÓMEZ", "horario": "Lu Mi Vi 09:00-11:00", "salon": "A-102"},
@@ -50,68 +47,65 @@ def generate_html(first_name, last_name):
 <head>
     <meta charset="UTF-8">
     <style>
-        body {{ font-family: Verdana, Arial, sans-serif; background-color: white; margin: 20px; font-size: 11px; color: #333; }}
+        body {{ font-family: Arial, Helvetica, sans-serif; background-color: white; margin: 30px; font-size: 11px; color: #333; }}
         
-        /* Encabezado */
-        .header {{ display: flex; justify-content: space-between; border-bottom: 3px solid #D59F0F; padding-bottom: 10px; margin-bottom: 15px; }}
-        .unam-title {{ font-weight: bold; font-size: 16px; color: #002B7A; }}
-        .sub-title {{ font-size: 12px; color: #555; margin-top: 4px; }}
+        /* HEADER MODIFICADO PARA MATCH EXACTO */
+        .header {{ border-bottom: 3px solid #D59F0F; padding-bottom: 15px; margin-bottom: 20px; }}
+        .unam-title {{ font-weight: 900; font-size: 18px; color: #002B7A; letter-spacing: 0.5px; }}
+        .sub-title {{ font-size: 13px; color: #555; margin-top: 5px; font-weight: bold; }}
         
-        /* Caja de Datos del Alumno */
-        .info-box {{ background-color: #E6EEF8; border: 1px solid #B0C4DE; padding: 10px; margin-bottom: 15px; border-radius: 4px; }}
-        .info-grid {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }}
-        .label {{ font-weight: bold; color: #002B7A; font-size: 10px; }}
-        .value {{ font-weight: bold; color: #000; font-size: 11px; }}
+        .info-box {{ background-color: #F0F4F8; border: 1px solid #B0C4DE; padding: 15px; margin-bottom: 20px; border-radius: 4px; }}
+        .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }}
+        .label {{ font-weight: bold; color: #002B7A; font-size: 10px; text-transform: uppercase; }}
+        .value {{ font-weight: bold; color: #000; font-size: 12px; }}
         
-        /* Tabla */
         table {{ width: 100%; border-collapse: collapse; border: 1px solid #ccc; }}
-        th {{ background-color: #002B7A; color: white; padding: 8px; font-size: 10px; text-align: left; border: 1px solid #001A4A; }}
-        td {{ padding: 6px; border: 1px solid #ddd; vertical-align: top; }}
+        th {{ background-color: #002B7A; color: white; padding: 10px; font-size: 10px; text-align: left; }}
+        td {{ padding: 8px; border: 1px solid #ddd; vertical-align: top; }}
         
         .data-row:nth-child(even) {{ background-color: #f9f9f9; }}
         .center {{ text-align: center; }}
-        .asignatura {{ font-weight: bold; color: #000; }}
-        .profesor {{ font-size: 9px; color: #555; font-style: italic; margin-top: 2px; }}
+        .asignatura {{ font-weight: bold; font-size: 11px; }}
+        .profesor {{ font-size: 9px; color: #666; margin-top: 2px; }}
         
-        /* Pie de página */
-        .footer {{ margin-top: 20px; font-size: 9px; color: #777; text-align: center; border-top: 1px solid #ccc; padding-top: 10px; }}
-        
-        /* Sello Digital Simulado */
-        .sello {{ font-family: "Courier New", monospace; font-size: 8px; color: #999; word-break: break-all; margin-top: 10px; border: 1px dashed #ccc; padding: 5px; }}
+        .footer {{ margin-top: 30px; font-size: 9px; color: #777; text-align: center; border-top: 1px solid #eee; padding-top: 10px; }}
     </style>
 </head>
 <body>
     <div class="header">
-        <div>
-            <div class="unam-title">UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO</div>
-            <div class="sub-title">SISTEMA INTEGRAL DE ADMINISTRACIÓN ESCOLAR (SIAE)</div>
-        </div>
-        <div style="text-align: right;">
-            <div class="unam-title" style="color:#D59F0F">DGAE</div>
-            <div class="sub-title">Tira de Asignaturas</div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div class="unam-title">UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO (UNAM)</div>
+                <div class="sub-title">DIRECCIÓN GENERAL DE ADMINISTRACIÓN ESCOLAR (DGAE)</div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:24px; font-weight:bold; color:#D59F0F; border:2px solid #D59F0F; padding:2px 8px; border-radius:4px;">SIAE</div>
+            </div>
         </div>
     </div>
 
     <div class="info-box">
         <div class="info-grid">
-            <div><span class="label">NÚMERO DE CUENTA:</span><br><span class="value">{cuenta}</span></div>
-            <div><span class="label">NOMBRE:</span><br><span class="value">{last_name.upper()}, {first_name.upper()}</span></div>
-            <div><span class="label">PLANTEL:</span><br><span class="value">FACULTAD DE INGENIERÍA</span></div>
-            <div><span class="label">CARRERA:</span><br><span class="value">INGENIERÍA EN COMPUTACIÓN</span></div>
-            <div><span class="label">SEMESTRE:</span><br><span class="value">{semestre}</span></div>
-            <div><span class="label">ESTATUS:</span><br><span class="value" style="color:green">REINSCRITO</span></div>
+            <div><span class="label">Alumno:</span><br><span class="value">{last_name.upper()} {first_name.upper()}</span></div>
+            <div><span class="label">N° Cuenta:</span><br><span class="value">{cuenta}</span></div>
+            <div><span class="label">Plantel / Campus:</span><br><span class="value">CIUDAD UNIVERSITARIA</span></div>
+            <div><span class="label">Carrera:</span><br><span class="value">LICENCIATURA EN INFORMÁTICA</span></div>
+            <div><span class="label">Ciclo Escolar:</span><br><span class="value">{semestre}</span></div>
+            <div><span class="label">Situación:</span><br><span class="value" style="color:#008000">✔ REINSCRITO</span></div>
         </div>
     </div>
+
+    <div style="margin-bottom:10px; font-weight:bold; font-size:12px; color:#002B7A;">TIRA DE ASIGNATURAS INSCRITAS</div>
 
     <table>
         <thead>
             <tr>
-                <th width="5%" class="center">CLAVE</th>
-                <th width="5%" class="center">GRUPO</th>
-                <th width="40%">ASIGNATURA / PROFESOR</th>
-                <th width="20%" class="center">HORARIO</th>
-                <th width="10%" class="center">SALÓN</th>
-                <th width="10%" class="center">MOVIMIENTO</th>
+                <th width="8%" class="center">Cve</th>
+                <th width="8%" class="center">Gpo</th>
+                <th>Asignatura</th>
+                <th width="20%" class="center">Horario</th>
+                <th width="10%" class="center">Salón</th>
+                <th width="10%" class="center">Estatus</th>
             </tr>
         </thead>
         <tbody>
@@ -119,14 +113,10 @@ def generate_html(first_name, last_name):
         </tbody>
     </table>
 
-    <div class="sello">
-        SELLO DIGITAL DE INSCRIPCIÓN: 
-        {random.randint(1000,9999)}-X{random.randint(1000,9999)}-ABC{random.randint(10,99)}-UNAM-{random.randint(100000,999999)}
-        <br>Este documento es válido para trámites escolares internos.
-    </div>
-
     <div class="footer">
-        Fecha de consulta: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} | DGAE-SIAE
+        Este documento es una representación impresa de la información escolar del alumno.<br>
+        SIAE - Sistema Integral de Administración Escolar | UNAM
+        <br>Fecha de emisión: {datetime.now().strftime('%d/%m/%Y')}
     </div>
 </body>
 </html>
@@ -134,26 +124,23 @@ def generate_html(first_name, last_name):
     return html
 
 def make_it_look_real(image_bytes):
-    """
-    Filtro de 'Foto de Pantalla' (Esencial para engañar a la IA)
-    """
+    """ Filtro de Realismo (Esencial) """
     if not HAS_PIL: return image_bytes
-    
     try:
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         arr = np.array(img)
         
-        # 1. Ruido (Simular mala calidad de cámara)
-        noise = np.random.normal(0, 15, arr.shape)
+        # 1. Ruido
+        noise = np.random.normal(0, 12, arr.shape)
         img = Image.fromarray(np.clip(arr + noise, 0, 255).astype(np.uint8))
         
-        # 2. Desenfoque y Rotación (Efecto "Foto chueca")
-        img = img.filter(ImageFilter.GaussianBlur(radius=0.6))
-        img = img.rotate(random.uniform(-1.0, 1.0), resample=Image.BICUBIC, expand=True, fillcolor='white')
+        # 2. Desenfoque y Rotación muy leves
+        img = img.filter(ImageFilter.GaussianBlur(radius=0.5))
+        img = img.rotate(random.uniform(-0.5, 0.5), resample=Image.BICUBIC, expand=True, fillcolor='white')
         
-        # 3. Compresión JPEG agresiva
+        # 3. Compresión
         out = io.BytesIO()
-        img.save(out, format='JPEG', quality=75)
+        img.save(out, format='JPEG', quality=82)
         return out.getvalue()
     except:
         return image_bytes
@@ -164,8 +151,7 @@ def generate_image(first_name, last_name, school_id='999'):
         html = generate_html(first_name, last_name)
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            # Viewport ancho para que quepa la tabla bien
-            page = browser.new_page(viewport={'width': 1024, 'height': 800})
+            page = browser.new_page(viewport={'width': 900, 'height': 1000})
             page.set_content(html, wait_until='load')
             page.wait_for_timeout(500)
             ss = page.screenshot(type='png', full_page=True)
@@ -174,6 +160,6 @@ def generate_image(first_name, last_name, school_id='999'):
     except Exception as e:
         raise Exception(f"Error: {e}")
 
-# Funciones de compatibilidad para evitar crash
+# Compatibilidad
 def generate_psu_id(): return "310000000"
 def generate_psu_email(f, l): return f"{f}.{l}@comunidad.unam.mx"
