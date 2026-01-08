@@ -1,9 +1,8 @@
 import random
 from datetime import datetime
 import io
-import sys
 
-# Importación segura de librerías de imagen
+# Importación segura de librerías
 try:
     import numpy as np
     from PIL import Image, ImageFilter, ImageEnhance
@@ -13,35 +12,36 @@ except ImportError:
 
 def generate_html(first_name, last_name):
     """
-    Genera un Comprobante de Inscripción de la UNAM (Estilo DGAE-SIAE)
+    Genera una Tira de Materias (Horario) de la UNAM - Estilo SIAE Clásico
     """
-    # Fecha actual en formato español
-    meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
-    now = datetime.now()
-    fecha_impresion = f"{now.day} de {meses[now.month-1]} de {now.year}"
-    hora_impresion = now.strftime("%H:%M:%S")
+    # Semestre actual UNAM (2026-2 es el próximo semestre típico para estas fechas)
+    semestre = "2026-2"
     
-    # Generar número de cuenta UNAM (9 dígitos típicos: 3 o 4 al inicio + random)
-    cuenta = f"32{random.randint(1000000, 9999999)}"
+    # Generar número de cuenta (9 dígitos)
+    cuenta = f"31{random.randint(1000000, 9999999)}"
     
-    # Materias típicas de tronco común
+    # Lista de materias con horarios realistas
     materias = [
-        {"clave": "1123", "asignatura": "ÁLGEBRA", "grupo": "1105", "creditos": "8"},
-        {"clave": "1124", "asignatura": "CÁLCULO Y GEOMETRÍA ANALÍTICA", "grupo": "1105", "creditos": "12"},
-        {"clave": "1128", "asignatura": "QUÍMICA", "grupo": "1112", "creditos": "10"},
-        {"clave": "1130", "asignatura": "REDACCIÓN Y EXPOSICIÓN DE TEMAS", "grupo": "1101", "creditos": "6"},
-        {"clave": "0052", "asignatura": "INGLES I", "grupo": "1101", "creditos": "0"}
+        {"clave": "1123", "gpo": "1105", "asignatura": "ÁLGEBRA SUPERIOR", "profesor": "DR. JORGE ALBERTO", "horario": "Lu Mi Vi 07:00-09:00", "salon": "A-101"},
+        {"clave": "1124", "gpo": "1105", "asignatura": "CÁLCULO DIFERENCIAL", "profesor": "M.I. ROBERTO GÓMEZ", "horario": "Lu Mi Vi 09:00-11:00", "salon": "A-102"},
+        {"clave": "1130", "gpo": "1101", "asignatura": "PROGRAMACIÓN AVANZADA", "profesor": "ING. LAURA MÉNDEZ", "horario": "Ma Ju 07:00-09:00", "salon": "L-201"},
+        {"clave": "1208", "gpo": "1112", "asignatura": "MECÁNICA CLÁSICA", "profesor": "FIS. PEDRO RAMÍREZ", "horario": "Ma Ju 09:00-11:00", "salon": "B-004"},
+        {"clave": "0052", "gpo": "1101", "asignatura": "INGLÉS IV", "profesor": "LIC. SARAH JONES", "horario": "Lu Mi Vi 11:00-13:00", "salon": "I-305"}
     ]
 
     filas_html = ""
     for m in materias:
         filas_html += f"""
-        <tr>
-            <td style="text-align: center;">{m['clave']}</td>
-            <td>{m['asignatura']}</td>
-            <td style="text-align: center;">{m['grupo']}</td>
-            <td style="text-align: center;">{m['creditos']}</td>
-            <td style="text-align: center;">ORDINARIO</td>
+        <tr class="data-row">
+            <td class="center">{m['clave']}</td>
+            <td class="center">{m['gpo']}</td>
+            <td>
+                <div class="asignatura">{m['asignatura']}</div>
+                <div class="profesor">{m['profesor']}</div>
+            </td>
+            <td class="center">{m['horario']}</td>
+            <td class="center">{m['salon']}</td>
+            <td class="center">Ordinario</td>
         </tr>
         """
 
@@ -50,66 +50,68 @@ def generate_html(first_name, last_name):
 <head>
     <meta charset="UTF-8">
     <style>
-        body {{ font-family: Arial, sans-serif; background-color: white; margin: 40px; color: #333; font-size: 12px; }}
+        body {{ font-family: Verdana, Arial, sans-serif; background-color: white; margin: 20px; font-size: 11px; color: #333; }}
         
-        /* Cabecera UNAM */
-        .header {{ display: flex; align-items: center; border-bottom: 2px solid #D59F0F; padding-bottom: 10px; margin-bottom: 20px; }}
-        .unam-logo {{ font-size: 30px; font-weight: bold; color: #002B7A; margin-right: 20px; border: 2px solid #002B7A; padding: 5px 10px; border-radius: 5px; }}
-        .header-text {{ color: #002B7A; }}
-        .header-title {{ font-size: 16px; font-weight: bold; }}
-        .header-sub {{ font-size: 12px; }}
+        /* Encabezado */
+        .header {{ display: flex; justify-content: space-between; border-bottom: 3px solid #D59F0F; padding-bottom: 10px; margin-bottom: 15px; }}
+        .unam-title {{ font-weight: bold; font-size: 16px; color: #002B7A; }}
+        .sub-title {{ font-size: 12px; color: #555; margin-top: 4px; }}
         
-        /* Título del Documento */
-        .doc-title {{ text-align: center; font-size: 18px; font-weight: bold; margin: 20px 0; color: #000; text-transform: uppercase; }}
+        /* Caja de Datos del Alumno */
+        .info-box {{ background-color: #E6EEF8; border: 1px solid #B0C4DE; padding: 10px; margin-bottom: 15px; border-radius: 4px; }}
+        .info-grid {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }}
+        .label {{ font-weight: bold; color: #002B7A; font-size: 10px; }}
+        .value {{ font-weight: bold; color: #000; font-size: 11px; }}
         
-        /* Datos del Alumno */
-        .student-box {{ border: 1px solid #ccc; padding: 10px; margin-bottom: 20px; background-color: #fcfcfc; }}
-        .data-row {{ display: flex; margin-bottom: 5px; }}
-        .label {{ font-weight: bold; width: 150px; color: #002B7A; }}
-        .value {{ font-weight: bold; color: #000; }}
+        /* Tabla */
+        table {{ width: 100%; border-collapse: collapse; border: 1px solid #ccc; }}
+        th {{ background-color: #002B7A; color: white; padding: 8px; font-size: 10px; text-align: left; border: 1px solid #001A4A; }}
+        td {{ padding: 6px; border: 1px solid #ddd; vertical-align: top; }}
         
-        /* Tabla de Materias */
-        table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }}
-        th {{ background-color: #002B7A; color: white; padding: 8px; border: 1px solid #002B7A; }}
-        td {{ border: 1px solid #ccc; padding: 6px; }}
+        .data-row:nth-child(even) {{ background-color: #f9f9f9; }}
+        .center {{ text-align: center; }}
+        .asignatura {{ font-weight: bold; color: #000; }}
+        .profesor {{ font-size: 9px; color: #555; font-style: italic; margin-top: 2px; }}
         
         /* Pie de página */
-        .footer {{ font-size: 10px; color: #666; margin-top: 40px; border-top: 1px solid #ccc; padding-top: 10px; display: flex; justify-content: space-between; }}
+        .footer {{ margin-top: 20px; font-size: 9px; color: #777; text-align: center; border-top: 1px solid #ccc; padding-top: 10px; }}
         
-        /* Marca de agua simulada */
-        .watermark {{ position: fixed; top: 40%; left: 20%; transform: rotate(-45deg); font-size: 100px; color: rgba(0,0,0,0.03); font-weight: bold; z-index: -1; }}
+        /* Sello Digital Simulado */
+        .sello {{ font-family: "Courier New", monospace; font-size: 8px; color: #999; word-break: break-all; margin-top: 10px; border: 1px dashed #ccc; padding: 5px; }}
     </style>
 </head>
 <body>
-    <div class="watermark">UNAM DGAE</div>
-
     <div class="header">
-        <div class="unam-logo">UNAM</div>
-        <div class="header-text">
-            <div class="header-title">UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO</div>
-            <div class="header-sub">DIRECCIÓN GENERAL DE ADMINISTRACIÓN ESCOLAR</div>
-            <div class="header-sub">SISTEMA INTEGRAL DE ADMINISTRACIÓN ESCOLAR</div>
+        <div>
+            <div class="unam-title">UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO</div>
+            <div class="sub-title">SISTEMA INTEGRAL DE ADMINISTRACIÓN ESCOLAR (SIAE)</div>
+        </div>
+        <div style="text-align: right;">
+            <div class="unam-title" style="color:#D59F0F">DGAE</div>
+            <div class="sub-title">Tira de Asignaturas</div>
         </div>
     </div>
 
-    <div class="doc-title">COMPROBANTE DE INSCRIPCIÓN<br><span style="font-size:14px">CICLO ESCOLAR 2025-2026 / 1</span></div>
-
-    <div class="student-box">
-        <div class="data-row"><span class="label">NÚMERO DE CUENTA:</span> <span class="value">{cuenta}</span></div>
-        <div class="data-row"><span class="label">NOMBRE DEL ALUMNO:</span> <span class="value">{last_name.upper()} {first_name.upper()}</span></div>
-        <div class="data-row"><span class="label">PLANTEL:</span> <span class="value">FACULTAD DE INGENIERÍA</span></div>
-        <div class="data-row"><span class="label">CARRERA:</span> <span class="value">INGENIERÍA EN COMPUTACIÓN</span></div>
-        <div class="data-row"><span class="label">SITUACIÓN:</span> <span class="value" style="color:green">INSCRITO</span></div>
+    <div class="info-box">
+        <div class="info-grid">
+            <div><span class="label">NÚMERO DE CUENTA:</span><br><span class="value">{cuenta}</span></div>
+            <div><span class="label">NOMBRE:</span><br><span class="value">{last_name.upper()}, {first_name.upper()}</span></div>
+            <div><span class="label">PLANTEL:</span><br><span class="value">FACULTAD DE INGENIERÍA</span></div>
+            <div><span class="label">CARRERA:</span><br><span class="value">INGENIERÍA EN COMPUTACIÓN</span></div>
+            <div><span class="label">SEMESTRE:</span><br><span class="value">{semestre}</span></div>
+            <div><span class="label">ESTATUS:</span><br><span class="value" style="color:green">REINSCRITO</span></div>
+        </div>
     </div>
 
     <table>
         <thead>
             <tr>
-                <th>CLAVE</th>
-                <th>ASIGNATURA</th>
-                <th>GRUPO</th>
-                <th>CRÉDITOS</th>
-                <th>TIPO INSCRIPCIÓN</th>
+                <th width="5%" class="center">CLAVE</th>
+                <th width="5%" class="center">GRUPO</th>
+                <th width="40%">ASIGNATURA / PROFESOR</th>
+                <th width="20%" class="center">HORARIO</th>
+                <th width="10%" class="center">SALÓN</th>
+                <th width="10%" class="center">MOVIMIENTO</th>
             </tr>
         </thead>
         <tbody>
@@ -117,19 +119,14 @@ def generate_html(first_name, last_name):
         </tbody>
     </table>
 
-    <div style="font-size: 11px; margin-top: 10px;">
-        <strong>TOTAL DE CRÉDITOS INSCRITOS:</strong> 36
+    <div class="sello">
+        SELLO DIGITAL DE INSCRIPCIÓN: 
+        {random.randint(1000,9999)}-X{random.randint(1000,9999)}-ABC{random.randint(10,99)}-UNAM-{random.randint(100000,999999)}
+        <br>Este documento es válido para trámites escolares internos.
     </div>
 
     <div class="footer">
-        <div>
-            La información contenida en este documento es de carácter informativo.<br>
-            Fuente: DGAE-SIAE WEB
-        </div>
-        <div style="text-align: right;">
-            Fecha de impresión: {fecha_impresion}<br>
-            Hora: {hora_impresion}
-        </div>
+        Fecha de consulta: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} | DGAE-SIAE
     </div>
 </body>
 </html>
@@ -138,59 +135,45 @@ def generate_html(first_name, last_name):
 
 def make_it_look_real(image_bytes):
     """
-    Filtro 'Foto de Celular' para evitar detección de bot.
+    Filtro de 'Foto de Pantalla' (Esencial para engañar a la IA)
     """
-    if not HAS_PIL:
-        return image_bytes # Devuelve original si falla librería
+    if not HAS_PIL: return image_bytes
     
     try:
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        img_array = np.array(img)
+        arr = np.array(img)
         
-        # 1. Ruido (Granulado)
-        noise = np.random.normal(0, 10, img_array.shape) 
-        noisy_img = np.clip(img_array + noise, 0, 255).astype(np.uint8)
-        img = Image.fromarray(noisy_img)
-
-        # 2. Desenfoque leve
-        img = img.filter(ImageFilter.GaussianBlur(radius=0.5))
-
-        # 3. Rotación sutil
-        angle = random.uniform(-0.8, 0.8)
-        img = img.rotate(angle, resample=Image.BICUBIC, expand=True, fillcolor='white')
-
-        # 4. Ajustes finales
-        enhancer = ImageEnhance.Brightness(img)
-        img = enhancer.enhance(0.96) # Un poco grisáceo (papel)
+        # 1. Ruido (Simular mala calidad de cámara)
+        noise = np.random.normal(0, 15, arr.shape)
+        img = Image.fromarray(np.clip(arr + noise, 0, 255).astype(np.uint8))
         
-        output = io.BytesIO()
-        img.save(output, format='JPEG', quality=85)
-        return output.getvalue()
+        # 2. Desenfoque y Rotación (Efecto "Foto chueca")
+        img = img.filter(ImageFilter.GaussianBlur(radius=0.6))
+        img = img.rotate(random.uniform(-1.0, 1.0), resample=Image.BICUBIC, expand=True, fillcolor='white')
         
-    except Exception as e:
-        print(f"Error filtro: {e}")
+        # 3. Compresión JPEG agresiva
+        out = io.BytesIO()
+        img.save(out, format='JPEG', quality=75)
+        return out.getvalue()
+    except:
         return image_bytes
 
 def generate_image(first_name, last_name, school_id='999'):
     try:
         from playwright.sync_api import sync_playwright
-        html_content = generate_html(first_name, last_name)
-
+        html = generate_html(first_name, last_name)
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            # Tamaño A4 vertical aproximado
-            page = browser.new_page(viewport={'width': 850, 'height': 1100})
-            page.set_content(html_content, wait_until='load')
+            # Viewport ancho para que quepa la tabla bien
+            page = browser.new_page(viewport={'width': 1024, 'height': 800})
+            page.set_content(html, wait_until='load')
             page.wait_for_timeout(500)
-            
-            screenshot_bytes = page.screenshot(type='png', full_page=True)
+            ss = page.screenshot(type='png', full_page=True)
             browser.close()
-
-        return make_it_look_real(screenshot_bytes)
-
+        return make_it_look_real(ss)
     except Exception as e:
-        raise Exception(f"Error generando: {e}")
+        raise Exception(f"Error: {e}")
 
-# Funciones Dummy para que el bot no se queje (Importante no borrarlas)
-def generate_psu_id(): return "320000000"
+# Funciones de compatibilidad para evitar crash
+def generate_psu_id(): return "310000000"
 def generate_psu_email(f, l): return f"{f}.{l}@comunidad.unam.mx"
