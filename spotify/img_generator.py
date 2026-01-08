@@ -160,6 +160,21 @@ def generate_image(first_name, last_name, school_id='999'):
     except Exception as e:
         raise Exception(f"Error: {e}")
 
-# Compatibilidad
-def generate_psu_id(): return "310000000"
-def generate_psu_email(f, l): return f"{f}.{l}@comunidad.unam.mx"
+import unicodedata
+
+def remove_accents(input_str):
+    """Quita acentos y caracteres especiales (José -> Jose)"""
+    if not isinstance(input_str, str): return str(input_str)
+    nfkd_form = unicodedata.normalize('NFKD', input_str)
+    return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+
+# Funciones de compatibilidad corregidas
+def generate_psu_id(): 
+    return "310000000"
+
+def generate_psu_email(first_name, last_name):
+    """Genera email limpio sin acentos"""
+    # Limpiamos nombres (quitar acentos y espacios extra)
+    f_clean = remove_accents(first_name).lower().replace(" ", "")
+    l_clean = remove_accents(last_name).lower().replace(" ", "")
+    return f"{f_clean}.{l_clean}@comunidad.unam.mx"
