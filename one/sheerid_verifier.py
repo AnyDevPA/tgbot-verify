@@ -1,13 +1,14 @@
-"""SheerID 学生验证主程序"""
+"""SheerID 学生验证主程序 - FIXED VERSION"""
 import re
 import random
 import logging
 import httpx
+import unicodedata  # <--- AGREGADO PARA LIMPIAR ACENTOS
 from typing import Dict, Optional, Tuple
 
 from . import config
-from .name_generator import NameGenerator, generate_birth_date
-from .img_generator import generate_image, generate_psu_email
+from .name_generator import NameGenerator, generate_email, generate_birth_date
+from .img_generator import generate_psu_email, generate_image
 
 # 配置日志
 logging.basicConfig(
@@ -46,6 +47,17 @@ class SheerIDVerifier:
         if match:
             return match.group(1)
         return None
+    
+    # --- NUEVA FUNCIÓN PARA LIMPIAR EMAIL ---
+    @staticmethod
+    def sanitize_email(email: str) -> str:
+        """Elimina acentos y caracteres raros del email (José -> jose)"""
+        if not email: return ""
+        # Normalizar a caracteres latinos básicos
+        nfkd_form = unicodedata.normalize('NFKD', email)
+        clean_email = "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+        return clean_email.encode('ascii', 'ignore').decode('ascii')
+    # ----------------------------------------
 
     def _sheerid_request(
         self, method: str, url: str, body: Optional[Dict] = None
@@ -88,7 +100,7 @@ class SheerIDVerifier:
         birth_date: str = None,
         school_id: str = None,
     ) -> Dict:
-        """执行验证流程"""
+        """执行验证流程，移除状态轮询以减少耗时"""
         try:
             current_step = "initial"
 
@@ -102,11 +114,17 @@ class SheerIDVerifier:
 
             if not email:
                 email = generate_psu_email(first_name, last_name)
+            
+            # --- PARCHE DE SEGURIDAD: LIMPIAR EMAIL ---
+            # Esto asegura que NUNCA se envíe un acento en el correo
+            email = self.sanitize_email(email)
+            # ------------------------------------------
+
             if not birth_date:
                 birth_date = generate_birth_date()
 
             logger.info(f"学生信息: {first_name} {last_name}")
-            logger.info(f"邮箱: {email}")
+            logger.info(f"邮箱 (Limpio): {email}") # Log para verificar
             logger.info(f"学校: {school['name']}")
             logger.info(f"生日: {birth_date}")
             logger.info(f"验证 ID: {self.verification_id}")
@@ -123,7 +141,7 @@ class SheerIDVerifier:
                 "firstName": first_name,
                 "lastName": last_name,
                 "birthDate": birth_date,
-                "email": email,
+                "email": email, # Aquí ya va limpio
                 "phoneNumber": "",
                 "organization": {
                     "id": int(school_id),
