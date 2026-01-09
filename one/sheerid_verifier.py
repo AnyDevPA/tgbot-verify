@@ -14,6 +14,7 @@ class SheerIDVerifier:
     def __init__(self, verification_id):
         self.verification_id = verification_id
         self.client = httpx.Client(timeout=30.0)
+        # Intentamos un fingerprint más complejo
         self.device_fingerprint = ''.join(random.choices('0123456789abcdef', k=32))
 
     @staticmethod
@@ -32,12 +33,18 @@ class SheerIDVerifier:
             first = name_data['first_name']
             last = name_data['last_name']
             
-            # Gmail para forzar subida de documento
-            email = self.sanitize_email(f"{first}.{last}{random.randint(11,99)}@gmail.com").lower()
-            dob = f"200{random.randint(0,5)}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
+            # ESTRATEGIA ANTI-FRAUDE:
+            # 1. Evitar Gmail (muy quemado). Usar Outlook/Yahoo.
+            # 2. Formato más limpio: nombre.apellido@... en lugar de nombre.apellido9999
+            domains = ["outlook.com", "yahoo.com", "icloud.com"]
+            clean_email = f"{first}.{last}@{random.choice(domains)}".lower()
+            email = self.sanitize_email(clean_email)
+            
+            # Fechas realistas para estudiante online (pueden ser mayores)
+            dob = f"19{random.randint(90,99)}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
             school = config.SCHOOLS[config.DEFAULT_SCHOOL_ID]
 
-            logger.info(f"🎓 STUDENT (ASU): {first} {last} | {school['name']}")
+            logger.info(f"🎓 STUDENT (SNHU): {first} {last} | {email}")
 
             # PASO 1
             payload = {
@@ -55,15 +62,13 @@ class SheerIDVerifier:
             data1 = resp1.json()
             current_step = data1.get("currentStep")
 
-            # --- MANEJO DE ERRORES DETALLADO ---
+            # --- DIAGNÓSTICO DE FRAUDE ---
             if current_step == "error":
                 error_ids = data1.get("errorIds", [])
-                logger.error(f"❌ Error en Paso 1: {error_ids}")
-                return {"success": False, "message": f"SheerID rechazó los datos: {error_ids}"}
+                logger.error(f"❌ RECHAZADO: {error_ids}")
+                return {"success": False, "message": f"SheerID bloqueó la solicitud: {error_ids}"}
 
-            # Si sale emailLoop, intentamos escapar
             if current_step == "emailLoop":
-                logger.info("⚠️ Email Loop detectado. Intentando saltar...")
                 self.client.delete(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/emailLoop")
                 status = self.client.get(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}").json()
                 current_step = status.get("currentStep")
@@ -71,9 +76,9 @@ class SheerIDVerifier:
             if current_step == "success":
                  return {"success": True, "pending": False, "redirect_url": data1.get("redirectUrl"), "status": data1}
 
-            # PASO 2: Subir Credencial
+            # PASO 2: Subir Credencial SNHU
             if current_step == "docUpload":
-                logger.info(">> Subiendo Credencial ASU...")
+                logger.info(">> Subiendo Credencial SNHU...")
                 img_bytes = generate_image(first, last)
                 
                 url_upload = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/docUpload"
@@ -86,7 +91,7 @@ class SheerIDVerifier:
                     final = self.client.post(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/completeDocUpload").json()
                     return {"success": True, "pending": True, "redirect_url": final.get("redirectUrl"), "status": final}
             
-            return {"success": False, "message": f"Estado desconocido: {current_step} - {data1}"}
+            return {"success": False, "message": f"Estado desconocido: {current_step}"}
 
         except Exception as e:
             return {"success": False, "message": str(e)}
