@@ -1,10 +1,10 @@
-# one/config.py - MODO WESTERN TECH (Low Security)
+# one/config.py - MODO WESTERN TECH (Fake Edu Email)
 
 PROGRAM_ID = '67c8c14f5f17a83b745e3f82'
 SHEERID_BASE_URL = 'https://services.sheerid.com'
 
 # Western Technical College (El Paso, TX)
-# ID sacado de tu captura: 4078874
+# ID: 4078874
 SCHOOLS = {
     '4078874': {
         'id': 4078874,
@@ -12,7 +12,8 @@ SCHOOLS = {
         'city': 'El Paso',
         'state': 'TX',
         'country': 'US',
-        'type': 'UNIVERSITY' # En SheerID suelen catalogarlas así
+        'type': 'UNIVERSITY',
+        'domain': 'westerntech.edu' # <--- DOMINIO CLAVE
     }
 }
 
