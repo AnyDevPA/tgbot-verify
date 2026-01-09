@@ -1,23 +1,22 @@
-# one/config.py - MODO ASU (Arizona State)
+# one/config.py - MODO SNHU (Online Friendly)
 
-# ID del Programa Google One
 PROGRAM_ID = '67c8c14f5f17a83b745e3f82'
 SHEERID_BASE_URL = 'https://services.sheerid.com'
 
-# Arizona State University (ASU)
-# ID común en SheerID: 1496
+# Southern New Hampshire University (SNHU)
+# ID: 3578 (Suele funcionar bien para online)
 SCHOOLS = {
-    '1496': {
-        'id': 1496,
-        'name': 'Arizona State University',
-        'city': 'Tempe',
-        'state': 'AZ',
+    '3578': {
+        'id': 3578,
+        'name': 'Southern New Hampshire University',
+        'city': 'Manchester',
+        'state': 'NH',
         'country': 'US',
         'type': 'UNIVERSITY'
     }
 }
 
-DEFAULT_SCHOOL_ID = '1496'
+DEFAULT_SCHOOL_ID = '3578'
 
 METADATA = {
     "marketConsentValue": False,
