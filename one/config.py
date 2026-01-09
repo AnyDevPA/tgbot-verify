@@ -1,22 +1,23 @@
-# one/config.py - MODO USA
+# one/config.py - MODO ASU (Arizona State)
 
 # ID del Programa Google One
 PROGRAM_ID = '67c8c14f5f17a83b745e3f82'
 SHEERID_BASE_URL = 'https://services.sheerid.com'
 
-# Pennsylvania State University - Main Campus
+# Arizona State University (ASU)
+# ID común en SheerID: 1496
 SCHOOLS = {
-    '2565': {
-        'id': 2565,
-        'name': 'Pennsylvania State University-Main Campus',
-        'city': 'University Park',
-        'state': 'PA',
+    '1496': {
+        'id': 1496,
+        'name': 'Arizona State University',
+        'city': 'Tempe',
+        'state': 'AZ',
         'country': 'US',
         'type': 'UNIVERSITY'
     }
 }
 
-DEFAULT_SCHOOL_ID = '2565'
+DEFAULT_SCHOOL_ID = '1496'
 
 METADATA = {
     "marketConsentValue": False,
