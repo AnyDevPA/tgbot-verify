@@ -5,66 +5,62 @@ try:
 except ImportError:
     HAS_PLAYWRIGHT = False
 
-def generate_phoenix_html(first_name, last_name):
-    """Credencial University of Phoenix"""
-    # ID numérico largo
-    phx_id = f"900{random.randint(100000, 999999)}"
+def generate_gcu_html(first_name, last_name):
+    """Credencial Grand Canyon University"""
+    gcu_id = f"{random.randint(10000000, 99999999)}"
     
     html = f"""<!DOCTYPE html>
 <html>
 <head>
 <style>
-    body {{ font-family: 'Arial', sans-serif; background: #fff; margin: 0; padding: 20px; }}
+    body {{ font-family: Arial, sans-serif; background: #fff; margin: 0; padding: 20px; }}
     .card {{
-        width: 360px; height: 230px;
-        background: #C8102E; /* Phoenix Red */
+        width: 350px; height: 220px;
+        background: white;
         border-radius: 10px;
+        border: 2px solid #522398; /* GCU Purple */
         position: relative;
-        color: white;
         overflow: hidden;
     }}
-    .white-section {{
-        position: absolute; bottom: 0; width: 100%; height: 160px;
-        background: white;
-    }}
     .header {{
-        position: absolute; top: 20px; left: 20px;
-        font-size: 16px; font-weight: bold; text-transform: uppercase;
-        letter-spacing: 1px;
-    }}
-    .photo {{
-        position: absolute; top: 50px; left: 20px;
-        width: 100px; height: 125px;
-        background: #eee; border: 3px solid white;
+        background: #522398;
+        height: 50px;
         display: flex; align-items: center; justify-content: center;
-        color: #555; font-size: 10px;
-        z-index: 10;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        color: white; font-weight: bold; font-size: 18px; letter-spacing: 1px;
     }}
-    .info {{
-        position: absolute; top: 80px; left: 140px;
-        color: #333; z-index: 5;
+    .content {{ display: flex; padding: 15px; }}
+    .photo {{
+        width: 90px; height: 110px; background: #eee;
+        border: 2px solid #522398;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 10px; color: #555;
     }}
-    .name {{ font-size: 20px; font-weight: bold; text-transform: uppercase; color: #C8102E; margin-bottom: 5px; }}
-    .role {{ font-size: 14px; font-weight: bold; margin-bottom: 20px; color: #555; }}
-    .id-row {{ font-family: monospace; font-size: 14px; color: #000; }}
+    .info {{ margin-left: 15px; width: 200px; }}
+    .name {{ font-size: 18px; font-weight: bold; text-transform: uppercase; color: #000; margin-bottom: 5px; }}
+    .role {{ color: #555; font-size: 14px; margin-bottom: 15px; font-weight: bold; }}
+    .id-block {{ font-size: 12px; color: #333; }}
     .footer {{
-        position: absolute; bottom: 10px; right: 15px;
-        font-size: 10px; color: #999; font-weight: bold;
+        position: absolute; bottom: 0; width: 100%; height: 20px;
+        background: #000; color: white; text-align: center;
+        font-size: 9px; line-height: 20px;
     }}
 </style>
 </head>
 <body>
     <div class="card">
-        <div class="header">University of Phoenix</div>
-        <div class="white-section"></div>
-        <div class="photo">STUDENT</div>
-        <div class="info">
-            <div class="name">{first_name}<br>{last_name}</div>
-            <div class="role">Student Body</div>
-            <div class="id-row">ID: {phx_id}</div>
+        <div class="header">GRAND CANYON UNIVERSITY</div>
+        <div class="content">
+            <div class="photo">GCU<br>STUDENT</div>
+            <div class="info">
+                <div class="name">{first_name}<br>{last_name}</div>
+                <div class="role">UNDERGRADUATE</div>
+                <div class="id-block">
+                    CAMPUS ID: {gcu_id}<br>
+                    VALID THRU: 05/2026
+                </div>
+            </div>
         </div>
-        <div class="footer">VALID 2025-2026</div>
+        <div class="footer">Lopes Up!</div>
     </div>
 </body>
 </html>"""
@@ -73,7 +69,7 @@ def generate_phoenix_html(first_name, last_name):
 def generate_image(first_name, last_name, school_id='999'):
     if not HAS_PLAYWRIGHT: return b""
     try:
-        html = generate_phoenix_html(first_name, last_name)
+        html = generate_gcu_html(first_name, last_name)
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page(viewport={'width': 400, 'height': 300})
