@@ -33,11 +33,16 @@ class SheerIDVerifier:
             first = name_data['first_name']
             last = name_data['last_name']
             
-            email = self.sanitize_email(f"{first}.{last}@austinisd.org").lower()
+            # --- CAMBIO CLAVE: USAR GMAIL PARA FORZAR DOCUMENTO ---
+            # Si usamos @austinisd.org, pide código de verificación (emailLoop).
+            # Si usamos @gmail.com, pide subir foto (docUpload).
+            email_domains = ["gmail.com", "yahoo.com", "hotmail.com"]
+            email = self.sanitize_email(f"{first}.{last}{random.randint(11,99)}@{random.choice(email_domains)}").lower()
+            
             dob = f"19{random.randint(75,95)}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
             school = config.SCHOOLS[config.DEFAULT_SCHOOL_ID]
 
-            logger.info(f"👨‍🏫 TEACHER: {first} {last} | {school['name']}")
+            logger.info(f"👨‍🏫 TEACHER: {first} {last} | {email}")
 
             # --- PASO 1: Enviar Datos ---
             logger.info(">> Enviando Datos K-12...")
@@ -76,7 +81,6 @@ class SheerIDVerifier:
 
             # --- LÓGICA INTELIGENTE ---
             if current_step == "success":
-                # ¡APROBADO INSTANTÁNEAMENTE!
                 return {
                     "success": True, 
                     "pending": False, 
@@ -85,7 +89,7 @@ class SheerIDVerifier:
                 }
             
             elif current_step != "docUpload":
-                # Si nos mandó a error o a otro lado raro
+                # Si sigue saliendo emailLoop u otra cosa, es que SheerID se puso estricto
                 raise Exception(f"Flujo inesperado: {current_step}. Error: {data1.get('errorIds')}")
 
             # --- PASO 2: Subir Credencial (Solo si pide docUpload) ---
