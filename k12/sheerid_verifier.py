@@ -33,9 +33,7 @@ class SheerIDVerifier:
             first = name_data['first_name']
             last = name_data['last_name']
             
-            # --- CAMBIO CLAVE: USAR GMAIL PARA FORZAR DOCUMENTO ---
-            # Si usamos @austinisd.org, pide código de verificación (emailLoop).
-            # Si usamos @gmail.com, pide subir foto (docUpload).
+            # Usamos dominios genéricos para evitar SSO, pero si sale loop, forzaremos subida
             email_domains = ["gmail.com", "yahoo.com", "hotmail.com"]
             email = self.sanitize_email(f"{first}.{last}{random.randint(11,99)}@{random.choice(email_domains)}").lower()
             
@@ -64,11 +62,9 @@ class SheerIDVerifier:
                 }
             }
             
-            # Intentar primero como Teacher
             url_step1 = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/collectTeacherPersonalInfo"
             resp1 = self.client.post(url_step1, json=payload)
             
-            # Si falla el endpoint de Teacher, probar Faculty
             if resp1.status_code != 200:
                 url_step1 = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/collectFacultyPersonalInfo"
                 resp1 = self.client.post(url_step1, json=payload)
@@ -77,9 +73,10 @@ class SheerIDVerifier:
 
             data1 = resp1.json()
             current_step = data1.get("currentStep")
-            logger.info(f"Paso 1 completado. Siguiente paso: {current_step}")
+            logger.info(f"Paso 1 completado. Estado: {current_step}")
 
-            # --- LÓGICA INTELIGENTE ---
+            # --- LÓGICA DE FUERZA BRUTA ---
+            # Si es success, ya ganamos.
             if current_step == "success":
                 return {
                     "success": True, 
@@ -88,32 +85,31 @@ class SheerIDVerifier:
                     "status": data1
                 }
             
-            elif current_step != "docUpload":
-                # Si sigue saliendo emailLoop u otra cosa, es que SheerID se puso estricto
-                raise Exception(f"Flujo inesperado: {current_step}. Error: {data1.get('errorIds')}")
-
-            # --- PASO 2: Subir Credencial (Solo si pide docUpload) ---
-            logger.info(">> Generando y Subiendo Credencial...")
+            # CAMBIO: Si es 'docUpload' O 'emailLoop', intentamos subir documento de todas formas.
+            # Ignoramos la advertencia del loop.
+            
+            logger.info(">> Forzando subida de credencial...")
             img_bytes = generate_image(first, last)
             
             url_upload = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/docUpload"
             resp2 = self.client.post(url_upload, json={"files": [{"fileName": "teacher_id.jpg", "mimeType": "image/jpeg", "fileSize": len(img_bytes)}]})
             
+            # Si falla al intentar subir, entonces sí nos detenemos
             if resp2.status_code != 200:
-                raise Exception(f"Error al iniciar subida: {resp2.text}")
+                raise Exception(f"No dejó subir documento (Estado {current_step}): {resp2.text}")
 
             upload_data = resp2.json()
             if "documents" not in upload_data:
-                raise Exception(f"Error crítico: API no devolvió URL de subida. Resp: {upload_data}")
+                raise Exception(f"API no devolvió URL de subida. Resp: {upload_data}")
 
             upload_link = upload_data["documents"][0]["uploadUrl"]
             
-            # Subir archivo real a S3
+            # Subir a S3
             put_resp = self.client.put(upload_link, content=img_bytes, headers={"Content-Type": "image/jpeg"})
             if put_resp.status_code not in [200, 201]:
-                 raise Exception(f"Error subiendo imagen a S3: {put_resp.status_code}")
+                 raise Exception(f"Error subiendo a S3: {put_resp.status_code}")
             
-            # Confirmar subida
+            # Confirmar y cerrar
             url_finish = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/completeDocUpload"
             final_resp = self.client.post(url_finish)
             final_data = final_resp.json()
