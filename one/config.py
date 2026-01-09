@@ -1,13 +1,13 @@
-# one/config.py - MODO PHOENIX (Stealth)
+# one/config.py - MODO GCU (Grand Canyon)
 
 PROGRAM_ID = '67c8c14f5f17a83b745e3f82'
 SHEERID_BASE_URL = 'https://services.sheerid.com'
 
-# University of Phoenix (ID: 4147)
+# Grand Canyon University (ID: 1761)
 SCHOOLS = {
-    '4147': {
-        'id': 4147,
-        'name': 'University of Phoenix',
+    '1761': {
+        'id': 1761,
+        'name': 'Grand Canyon University',
         'city': 'Phoenix',
         'state': 'AZ',
         'country': 'US',
@@ -15,7 +15,7 @@ SCHOOLS = {
     }
 }
 
-DEFAULT_SCHOOL_ID = '4147'
+DEFAULT_SCHOOL_ID = '1761'
 
 METADATA = {
     "marketConsentValue": False,
