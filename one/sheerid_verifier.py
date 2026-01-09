@@ -1,273 +1,90 @@
-"""SheerID 学生验证主程序 - FIXED VERSION"""
-import re
-import random
 import logging
 import httpx
-import unicodedata  # <--- AGREGADO PARA LIMPIAR ACENTOS
-from typing import Dict, Optional, Tuple
-
+import random
+import unicodedata
+import re
 from . import config
-from .name_generator import NameGenerator, generate_email, generate_birth_date
-from .img_generator import generate_psu_email, generate_image
+from .img_generator import generate_image
+from .name_generator import NameGenerator 
 
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(asctime)s] [%(levelname)s] %(message)s',
-    datefmt='%H:%M:%S'
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 class SheerIDVerifier:
-    """SheerID 学生身份验证器"""
-
-    def __init__(self, verification_id: str):
+    def __init__(self, verification_id):
         self.verification_id = verification_id
-        self.device_fingerprint = self._generate_device_fingerprint()
-        self.http_client = httpx.Client(timeout=30.0)
-
-    def __del__(self):
-        if hasattr(self, "http_client"):
-            self.http_client.close()
+        self.client = httpx.Client(timeout=30.0)
+        self.device_fingerprint = ''.join(random.choices('0123456789abcdef', k=32))
 
     @staticmethod
-    def _generate_device_fingerprint() -> str:
-        chars = '0123456789abcdef'
-        return ''.join(random.choice(chars) for _ in range(32))
+    def parse_verification_id(url: str):
+        match = re.search(r"verificationId=([a-f0-9]+)", url)
+        return match.group(1) if match else None
 
-    @staticmethod
-    def normalize_url(url: str) -> str:
-        """规范化 URL（保留原样）"""
-        return url
-
-    @staticmethod
-    def parse_verification_id(url: str) -> Optional[str]:
-        match = re.search(r"verificationId=([a-f0-9]+)", url, re.IGNORECASE)
-        if match:
-            return match.group(1)
-        return None
-    
-    # --- NUEVA FUNCIÓN PARA LIMPIAR EMAIL ---
-    @staticmethod
-    def sanitize_email(email: str) -> str:
-        """Elimina acentos y caracteres raros del email (José -> jose)"""
+    def sanitize_email(self, email: str) -> str:
         if not email: return ""
-        # Normalizar a caracteres latinos básicos
-        nfkd_form = unicodedata.normalize('NFKD', email)
-        clean_email = "".join([c for c in nfkd_form if not unicodedata.combining(c)])
-        return clean_email.encode('ascii', 'ignore').decode('ascii')
-    # ----------------------------------------
+        nfkd = unicodedata.normalize('NFKD', email)
+        return "".join([c for c in nfkd if not unicodedata.combining(c)]).encode('ascii', 'ignore').decode('ascii')
 
-    def _sheerid_request(
-        self, method: str, url: str, body: Optional[Dict] = None
-    ) -> Tuple[Dict, int]:
-        """发送 SheerID API 请求"""
-        headers = {
-            "Content-Type": "application/json",
-        }
-
+    def verify(self):
         try:
-            response = self.http_client.request(
-                method=method, url=url, json=body, headers=headers
-            )
-            try:
-                data = response.json()
-            except Exception:
-                data = response.text
-            return data, response.status_code
-        except Exception as e:
-            logger.error(f"SheerID 请求失败: {e}")
-            raise
-
-    def _upload_to_s3(self, upload_url: str, img_data: bytes) -> bool:
-        """上传 PNG 到 S3"""
-        try:
-            headers = {"Content-Type": "image/png"}
-            response = self.http_client.put(
-                upload_url, content=img_data, headers=headers, timeout=60.0
-            )
-            return 200 <= response.status_code < 300
-        except Exception as e:
-            logger.error(f"S3 上传失败: {e}")
-            return False
-
-    def verify(
-        self,
-        first_name: str = None,
-        last_name: str = None,
-        email: str = None,
-        birth_date: str = None,
-        school_id: str = None,
-    ) -> Dict:
-        """执行验证流程，移除状态轮询以减少耗时"""
-        try:
-            current_step = "initial"
-
-            if not first_name or not last_name:
-                name = NameGenerator.generate()
-                first_name = name["first_name"]
-                last_name = name["last_name"]
-
-            school_id = school_id or config.DEFAULT_SCHOOL_ID
-            school = config.SCHOOLS[school_id]
-
-            if not email:
-                email = generate_psu_email(first_name, last_name)
+            # Generar nombre GRINGO
+            name_data = NameGenerator.generate() 
+            first = name_data['first_name']
+            last = name_data['last_name']
             
-            # --- PARCHE DE SEGURIDAD: LIMPIAR EMAIL ---
-            # Esto asegura que NUNCA se envíe un acento en el correo
-            email = self.sanitize_email(email)
-            # ------------------------------------------
+            # Usar GMAIL para evitar que pidan loguearse en el portal de la uni
+            email = f"{first}.{last}{random.randint(11,99)}@gmail.com".lower()
+            dob = f"200{random.randint(0,5)}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
+            school = config.SCHOOLS[config.DEFAULT_SCHOOL_ID]
 
-            if not birth_date:
-                birth_date = generate_birth_date()
+            logger.info(f"🎓 STUDENT (USA): {first} {last} | {school['name']}")
 
-            logger.info(f"学生信息: {first_name} {last_name}")
-            logger.info(f"邮箱 (Limpio): {email}") # Log para verificar
-            logger.info(f"学校: {school['name']}")
-            logger.info(f"生日: {birth_date}")
-            logger.info(f"验证 ID: {self.verification_id}")
-
-            # 生成学生证 PNG
-            logger.info("步骤 1/4: 生成学生证 PNG...")
-            img_data = generate_image(first_name, last_name, school_id)
-            file_size = len(img_data)
-            logger.info(f"✅ PNG 大小: {file_size / 1024:.2f}KB")
-
-            # 提交学生信息
-            logger.info("步骤 2/4: 提交学生信息...")
-            step2_body = {
-                "firstName": first_name,
-                "lastName": last_name,
-                "birthDate": birth_date,
-                "email": email, # Aquí ya va limpio
-                "phoneNumber": "",
-                "organization": {
-                    "id": int(school_id),
-                    "idExtended": school["idExtended"],
-                    "name": school["name"],
-                },
+            # PASO 1: Enviar Datos
+            payload = {
+                "firstName": first,
+                "lastName": last,
+                "birthDate": dob,
+                "email": email,
+                "organization": {"id": school['id'], "name": school['name']},
                 "deviceFingerprintHash": self.device_fingerprint,
-                "locale": "en-US",
-                "metadata": {
-                    "marketConsentValue": False,
-                    "refererUrl": f"{config.SHEERID_BASE_URL}/verify/{config.PROGRAM_ID}/?verificationId={self.verification_id}",
-                    "verificationId": self.verification_id,
-                    "flags": '{"collect-info-step-email-first":"default","doc-upload-considerations":"default","doc-upload-may24":"default","doc-upload-redesign-use-legacy-message-keys":false,"docUpload-assertion-checklist":"default","font-size":"default","include-cvec-field-france-student":"not-labeled-optional"}',
-                    "submissionOptIn": "By submitting the personal information above, I acknowledge that my personal information is being collected under the privacy policy of the business from which I am seeking a discount",
-                },
+                "metadata": {**config.METADATA, "verificationId": self.verification_id, "refererUrl": f"{config.SHEERID_BASE_URL}/verify/{config.PROGRAM_ID}/"}
             }
+            
+            url_step1 = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/collectStudentPersonalInfo"
+            resp1 = self.client.post(url_step1, json=payload)
+            
+            if resp1.status_code != 200:
+                 raise Exception(f"Error Datos: {resp1.text}")
 
-            step2_data, step2_status = self._sheerid_request(
-                "POST",
-                f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/collectStudentPersonalInfo",
-                step2_body,
-            )
+            data1 = resp1.json()
+            current_step = data1.get("currentStep")
 
-            if step2_status != 200:
-                raise Exception(f"步骤 2 失败 (状态码 {step2_status}): {step2_data}")
-            if step2_data.get("currentStep") == "error":
-                error_msg = ", ".join(step2_data.get("errorIds", ["Unknown error"]))
-                raise Exception(f"步骤 2 错误: {error_msg}")
+            # Manejo de Email Loop (Si Google se pone pesado)
+            if current_step == "emailLoop":
+                self.client.delete(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/emailLoop")
+                status = self.client.get(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}").json()
+                current_step = status.get("currentStep")
 
-            logger.info(f"✅ 步骤 2 完成: {step2_data.get('currentStep')}")
-            current_step = step2_data.get("currentStep", current_step)
+            if current_step == "success":
+                 return {"success": True, "pending": False, "redirect_url": data1.get("redirectUrl"), "status": data1}
 
-            # 跳过 SSO（如需要）
-            if current_step in ["sso", "collectStudentPersonalInfo"]:
-                logger.info("步骤 3/4: 跳过 SSO 验证...")
-                step3_data, _ = self._sheerid_request(
-                    "DELETE",
-                    f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/sso",
-                )
-                logger.info(f"✅ 步骤 3 完成: {step3_data.get('currentStep')}")
-                current_step = step3_data.get("currentStep", current_step)
-
-            # 上传文档并完成提交
-            logger.info("步骤 4/4: 请求并上传文档...")
-            step4_body = {
-                "files": [
-                    {"fileName": "student_card.png", "mimeType": "image/png", "fileSize": file_size}
-                ]
-            }
-            step4_data, step4_status = self._sheerid_request(
-                "POST",
-                f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/docUpload",
-                step4_body,
-            )
-            if not step4_data.get("documents"):
-                raise Exception("未能获取上传 URL")
-
-            upload_url = step4_data["documents"][0]["uploadUrl"]
-            logger.info("✅ 获取上传 URL 成功")
-            if not self._upload_to_s3(upload_url, img_data):
-                raise Exception("S3 上传失败")
-            logger.info("✅ 学生证上传成功")
-
-            step6_data, _ = self._sheerid_request(
-                "POST",
-                f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/completeDocUpload",
-            )
-            logger.info(f"✅ 文档提交完成: {step6_data.get('currentStep')}")
-            final_status = step6_data
-
-            # 不做状态轮询，直接返回等待审核
-            return {
-                "success": True,
-                "pending": True,
-                "message": "文档已提交，等待审核",
-                "verification_id": self.verification_id,
-                "redirect_url": final_status.get("redirectUrl"),
-                "status": final_status,
-            }
+            # PASO 2: Subir Credencial PSU
+            if current_step == "docUpload":
+                logger.info(">> Subiendo Credencial PSU...")
+                img_bytes = generate_image(first, last)
+                
+                url_upload = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/docUpload"
+                resp2 = self.client.post(url_upload, json={"files": [{"fileName": "student_id.jpg", "mimeType": "image/jpeg", "fileSize": len(img_bytes)}]})
+                
+                if "documents" in resp2.json():
+                    upload_link = resp2.json()["documents"][0]["uploadUrl"]
+                    self.client.put(upload_link, content=img_bytes, headers={"Content-Type": "image/jpeg"})
+                    
+                    final = self.client.post(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/completeDocUpload").json()
+                    return {"success": True, "pending": True, "redirect_url": final.get("redirectUrl"), "status": final}
+            
+            return {"success": False, "message": f"Estado desconocido: {current_step}"}
 
         except Exception as e:
-            logger.error(f"❌ 验证失败: {e}")
-            return {"success": False, "message": str(e), "verification_id": self.verification_id}
-
-
-def main():
-    """主函数 - 命令行界面"""
-    import sys
-
-    print("=" * 60)
-    print("SheerID 学生身份验证工具 (Python版)")
-    print("=" * 60)
-    print()
-
-    if len(sys.argv) > 1:
-        url = sys.argv[1]
-    else:
-        url = input("请输入 SheerID 验证 URL: ").strip()
-
-    if not url:
-        print("❌ 错误: 未提供 URL")
-        sys.exit(1)
-
-    verification_id = SheerIDVerifier.parse_verification_id(url)
-    if not verification_id:
-        print("❌ 错误: 无效的验证 ID 格式")
-        sys.exit(1)
-
-    print(f"✅ 解析到验证 ID: {verification_id}")
-    print()
-
-    verifier = SheerIDVerifier(verification_id)
-    result = verifier.verify()
-
-    print()
-    print("=" * 60)
-    print("验证结果:")
-    print("=" * 60)
-    print(f"状态: {'✅ 成功' if result['success'] else '❌ 失败'}")
-    print(f"消息: {result['message']}")
-    if result.get("redirect_url"):
-        print(f"跳转 URL: {result['redirect_url']}")
-    print("=" * 60)
-
-    return 0 if result["success"] else 1
-
-
-if __name__ == "__main__":
-    exit(main())
+            return {"success": False, "message": str(e)}
