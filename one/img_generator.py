@@ -1,180 +1,84 @@
 import random
-from datetime import datetime
-import io
-
-# Importación segura de librerías
 try:
-    import numpy as np
-    from PIL import Image, ImageFilter, ImageEnhance
-    HAS_PIL = True
+    from playwright.sync_api import sync_playwright
+    HAS_PLAYWRIGHT = True
 except ImportError:
-    HAS_PIL = False
+    HAS_PLAYWRIGHT = False
 
-def generate_html(first_name, last_name):
-    """
-    Genera Tira de Materias UNAM corregida para pasar el filtro de nombre exacto.
-    """
-    semestre = "2026-2"
-    cuenta = f"31{random.randint(1000000, 9999999)}"
+def generate_psu_html(first_name, last_name):
+    """Credencial Penn State University"""
+    id_num = f"9{random.randint(10000000, 99999999)}"
     
-    # Materias
-    materias = [
-        {"clave": "1123", "gpo": "1105", "asignatura": "ÁLGEBRA SUPERIOR", "profesor": "DR. JORGE ALBERTO", "horario": "Lu Mi Vi 07:00-09:00", "salon": "A-101"},
-        {"clave": "1124", "gpo": "1105", "asignatura": "CÁLCULO DIFERENCIAL", "profesor": "M.I. ROBERTO GÓMEZ", "horario": "Lu Mi Vi 09:00-11:00", "salon": "A-102"},
-        {"clave": "1130", "gpo": "1101", "asignatura": "PROGRAMACIÓN AVANZADA", "profesor": "ING. LAURA MÉNDEZ", "horario": "Ma Ju 07:00-09:00", "salon": "L-201"},
-        {"clave": "1208", "gpo": "1112", "asignatura": "MECÁNICA CLÁSICA", "profesor": "FIS. PEDRO RAMÍREZ", "horario": "Ma Ju 09:00-11:00", "salon": "B-004"},
-        {"clave": "0052", "gpo": "1101", "asignatura": "INGLÉS IV", "profesor": "LIC. SARAH JONES", "horario": "Lu Mi Vi 11:00-13:00", "salon": "I-305"}
-    ]
-
-    filas_html = ""
-    for m in materias:
-        filas_html += f"""
-        <tr class="data-row">
-            <td class="center">{m['clave']}</td>
-            <td class="center">{m['gpo']}</td>
-            <td>
-                <div class="asignatura">{m['asignatura']}</div>
-                <div class="profesor">{m['profesor']}</div>
-            </td>
-            <td class="center">{m['horario']}</td>
-            <td class="center">{m['salon']}</td>
-            <td class="center">Ordinario</td>
-        </tr>
-        """
-
     html = f"""<!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <style>
-        body {{ font-family: Arial, Helvetica, sans-serif; background-color: white; margin: 30px; font-size: 11px; color: #333; }}
-        
-        /* HEADER MODIFICADO PARA MATCH EXACTO */
-        .header {{ border-bottom: 3px solid #D59F0F; padding-bottom: 15px; margin-bottom: 20px; }}
-        .unam-title {{ font-weight: 900; font-size: 18px; color: #002B7A; letter-spacing: 0.5px; }}
-        .sub-title {{ font-size: 13px; color: #555; margin-top: 5px; font-weight: bold; }}
-        
-        .info-box {{ background-color: #F0F4F8; border: 1px solid #B0C4DE; padding: 15px; margin-bottom: 20px; border-radius: 4px; }}
-        .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }}
-        .label {{ font-weight: bold; color: #002B7A; font-size: 10px; text-transform: uppercase; }}
-        .value {{ font-weight: bold; color: #000; font-size: 12px; }}
-        
-        table {{ width: 100%; border-collapse: collapse; border: 1px solid #ccc; }}
-        th {{ background-color: #002B7A; color: white; padding: 10px; font-size: 10px; text-align: left; }}
-        td {{ padding: 8px; border: 1px solid #ddd; vertical-align: top; }}
-        
-        .data-row:nth-child(even) {{ background-color: #f9f9f9; }}
-        .center {{ text-align: center; }}
-        .asignatura {{ font-weight: bold; font-size: 11px; }}
-        .profesor {{ font-size: 9px; color: #666; margin-top: 2px; }}
-        
-        .footer {{ margin-top: 30px; font-size: 9px; color: #777; text-align: center; border-top: 1px solid #eee; padding-top: 10px; }}
-    </style>
+<style>
+    body {{ font-family: Arial, sans-serif; background: #fff; margin: 0; padding: 20px; }}
+    .card {{
+        width: 350px; height: 220px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        position: relative;
+        background: white;
+        overflow: hidden;
+    }}
+    .header {{
+        background-color: #001E44; /* PSU Blue */
+        height: 50px;
+        display: flex; align-items: center; justify-content: center;
+    }}
+    .header-text {{ color: white; font-weight: bold; font-size: 18px; letter-spacing: 1px; }}
+    .content {{ display: flex; padding: 15px; }}
+    .photo {{
+        width: 90px; height: 110px; background: #eee; border: 2px solid #001E44;
+        display: flex; align-items: center; justify-content: center; font-size: 10px; color: #888;
+    }}
+    .details {{ margin-left: 15px; font-size: 12px; color: #333; }}
+    .name {{ font-size: 16px; font-weight: bold; text-transform: uppercase; color: #000; margin-bottom: 5px; }}
+    .id-row {{ margin-top: 10px; font-weight: bold; font-size: 14px; color: #001E44; }}
+    .footer {{
+        position: absolute; bottom: 0; width: 100%; height: 30px;
+        background: #001E44; color: white; text-align: center; line-height: 30px; font-size: 10px;
+    }}
+    .logo-placeholder {{
+        position: absolute; top: 60px; right: 20px;
+        width: 50px; height: 50px; border-radius: 50%;
+        background: #ddd; opacity: 0.5;
+    }}
+</style>
 </head>
 <body>
-    <div class="header">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <div class="unam-title">UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO (UNAM)</div>
-                <div class="sub-title">DIRECCIÓN GENERAL DE ADMINISTRACIÓN ESCOLAR (DGAE)</div>
-            </div>
-            <div style="text-align:right;">
-                <div style="font-size:24px; font-weight:bold; color:#D59F0F; border:2px solid #D59F0F; padding:2px 8px; border-radius:4px;">SIAE</div>
+    <div class="card">
+        <div class="header">
+            <div class="header-text">PENN STATE</div>
+        </div>
+        <div class="logo-placeholder"></div>
+        <div class="content">
+            <div class="photo">STUDENT<br>PHOTO</div>
+            <div class="details">
+                <div class="name">{first_name}<br>{last_name}</div>
+                <div>Undergraduate Student</div>
+                <div>University Park</div>
+                <div class="id-row">ID: {id_num}</div>
+                <div style="margin-top:5px;">Exp: 05/2026</div>
             </div>
         </div>
-    </div>
-
-    <div class="info-box">
-        <div class="info-grid">
-            <div><span class="label">Alumno:</span><br><span class="value">{last_name.upper()} {first_name.upper()}</span></div>
-            <div><span class="label">N° Cuenta:</span><br><span class="value">{cuenta}</span></div>
-            <div><span class="label">Plantel / Campus:</span><br><span class="value">CIUDAD UNIVERSITARIA</span></div>
-            <div><span class="label">Carrera:</span><br><span class="value">LICENCIATURA EN INFORMÁTICA</span></div>
-            <div><span class="label">Ciclo Escolar:</span><br><span class="value">{semestre}</span></div>
-            <div><span class="label">Situación:</span><br><span class="value" style="color:#008000">✔ REINSCRITO</span></div>
-        </div>
-    </div>
-
-    <div style="margin-bottom:10px; font-weight:bold; font-size:12px; color:#002B7A;">TIRA DE ASIGNATURAS INSCRITAS</div>
-
-    <table>
-        <thead>
-            <tr>
-                <th width="8%" class="center">Cve</th>
-                <th width="8%" class="center">Gpo</th>
-                <th>Asignatura</th>
-                <th width="20%" class="center">Horario</th>
-                <th width="10%" class="center">Salón</th>
-                <th width="10%" class="center">Estatus</th>
-            </tr>
-        </thead>
-        <tbody>
-            {filas_html}
-        </tbody>
-    </table>
-
-    <div class="footer">
-        Este documento es una representación impresa de la información escolar del alumno.<br>
-        SIAE - Sistema Integral de Administración Escolar | UNAM
-        <br>Fecha de emisión: {datetime.now().strftime('%d/%m/%Y')}
+        <div class="footer">PennState id+ Card</div>
     </div>
 </body>
-</html>
-"""
+</html>"""
     return html
 
-def make_it_look_real(image_bytes):
-    """ Filtro de Realismo (Esencial) """
-    if not HAS_PIL: return image_bytes
-    try:
-        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        arr = np.array(img)
-        
-        # 1. Ruido
-        noise = np.random.normal(0, 12, arr.shape)
-        img = Image.fromarray(np.clip(arr + noise, 0, 255).astype(np.uint8))
-        
-        # 2. Desenfoque y Rotación muy leves
-        img = img.filter(ImageFilter.GaussianBlur(radius=0.5))
-        img = img.rotate(random.uniform(-0.5, 0.5), resample=Image.BICUBIC, expand=True, fillcolor='white')
-        
-        # 3. Compresión
-        out = io.BytesIO()
-        img.save(out, format='JPEG', quality=82)
-        return out.getvalue()
-    except:
-        return image_bytes
-
 def generate_image(first_name, last_name, school_id='999'):
+    if not HAS_PLAYWRIGHT: return b""
     try:
-        from playwright.sync_api import sync_playwright
-        html = generate_html(first_name, last_name)
+        html = generate_psu_html(first_name, last_name)
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            page = browser.new_page(viewport={'width': 900, 'height': 1000})
-            page.set_content(html, wait_until='load')
-            page.wait_for_timeout(500)
-            ss = page.screenshot(type='png', full_page=True)
+            page = browser.new_page(viewport={'width': 400, 'height': 300})
+            page.set_content(html)
+            img = page.screenshot(type='jpeg', quality=90)
             browser.close()
-        return make_it_look_real(ss)
-    except Exception as e:
-        raise Exception(f"Error: {e}")
-
-import unicodedata
-
-def remove_accents(input_str):
-    """Quita acentos y caracteres especiales (José -> Jose)"""
-    if not isinstance(input_str, str): return str(input_str)
-    nfkd_form = unicodedata.normalize('NFKD', input_str)
-    return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
-
-# Funciones de compatibilidad corregidas
-def generate_psu_id(): 
-    return "310000000"
-
-def generate_psu_email(first_name, last_name):
-    """Genera email limpio sin acentos"""
-    # Limpiamos nombres (quitar acentos y espacios extra)
-    f_clean = remove_accents(first_name).lower().replace(" ", "")
-    l_clean = remove_accents(last_name).lower().replace(" ", "")
-    return f"{f_clean}.{l_clean}@comunidad.unam.mx"
+        return img
+    except Exception:
+        return b""
