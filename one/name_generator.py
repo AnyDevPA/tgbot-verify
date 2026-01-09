@@ -1,61 +1,83 @@
-"""Generador de Nombres Latinos para Bypass"""
+"""随机名字生成器"""
 import random
 
 class NameGenerator:
-    """Generador de nombres comunes en México/Latam"""
+    """英文名字生成器"""
     
-    # Listas de nombres reales y comunes
-    FIRST_NAMES = [
-        'Juan', 'José', 'Luis', 'Carlos', 'Francisco', 'Pedro', 'Jesús', 'Manuel', 'Miguel', 'Antonio',
-        'Alejandro', 'David', 'Daniel', 'Jorge', 'Ricardo', 'Eduardo', 'Roberto', 'Gabriel', 'Fernando',
-        'María', 'Ana', 'Sofía', 'Fernanda', 'Valeria', 'Daniela', 'Guadalupe', 'Andrea', 'Juana',
-        'Gabriela', 'Patricia', 'Adriana', 'Verónica', 'Alejandra', 'Elizabeth', 'Mariana', 'Ximena'
-    ]
+    ROOTS = {
+        'prefixes': ['Al', 'Bri', 'Car', 'Dan', 'El', 'Fer', 'Gar', 'Har', 'Jes', 'Kar', 
+                     'Lar', 'Mar', 'Nor', 'Par', 'Quin', 'Ros', 'Sar', 'Tar', 'Val', 'Wil'],
+        'middles': ['an', 'en', 'in', 'on', 'ar', 'er', 'or', 'ur', 'al', 'el', 
+                    'il', 'ol', 'am', 'em', 'im', 'om', 'ay', 'ey', 'oy', 'ian'],
+        'suffixes': ['ton', 'son', 'man', 'ley', 'field', 'ford', 'wood', 'stone', 'worth', 'berg',
+                     'stein', 'bach', 'heim', 'gard', 'land', 'wick', 'shire', 'dale', 'brook', 'ridge'],
+        'name_roots': ['Alex', 'Bern', 'Crist', 'Dav', 'Edw', 'Fred', 'Greg', 'Henr', 'Ivan', 'John',
+                       'Ken', 'Leon', 'Mich', 'Nick', 'Oliv', 'Paul', 'Rich', 'Step', 'Thom', 'Will'],
+        'name_endings': ['a', 'e', 'i', 'o', 'y', 'ie', 'ey', 'an', 'en', 'in', 
+                         'on', 'er', 'ar', 'or', 'el', 'al', 'iel', 'ael', 'ine', 'lyn']
+    }
     
-    LAST_NAMES = [
-        'Hernández', 'García', 'Martínez', 'López', 'González', 'Pérez', 'Rodríguez', 'Sánchez',
-        'Ramírez', 'Cruz', 'Flores', 'Gómez', 'Morales', 'Vázquez', 'Jiménez', 'Reyes', 'Díaz',
-        'Torres', 'Gutiérrez', 'Ruiz', 'Mendoza', 'Aguilar', 'Ortiz', 'Castillo', 'Moreno',
-        'Romero', 'Álvarez', 'Rivera', 'Chávez', 'Ramos', 'De la Cruz', 'Domínguez', 'Vargas'
-    ]
+    PATTERNS = {
+        'first_name': [
+            ['prefix', 'ending'],
+            ['name_root', 'ending'],
+            ['prefix', 'middle', 'ending'],
+            ['name_root', 'middle', 'ending']
+        ],
+        'last_name': [
+            ['prefix', 'suffix'],
+            ['name_root', 'suffix'],
+            ['prefix', 'middle', 'suffix'],
+            ['compound']
+        ]
+    }
+    
+    @classmethod
+    def _generate_component(cls, pattern):
+        """根据模式生成名字组件"""
+        components = []
+        for part in pattern:
+            if part == 'prefix':
+                component = random.choice(cls.ROOTS['prefixes'])
+            elif part == 'middle':
+                component = random.choice(cls.ROOTS['middles'])
+            elif part == 'suffix':
+                component = random.choice(cls.ROOTS['suffixes'])
+            elif part == 'name_root':
+                component = random.choice(cls.ROOTS['name_roots'])
+            elif part == 'ending':
+                component = random.choice(cls.ROOTS['name_endings'])
+            elif part == 'compound':
+                part1 = random.choice(cls.ROOTS['prefixes'])
+                part2 = random.choice(cls.ROOTS['suffixes'])
+                component = part1 + part2
+            else:
+                component = ''
+            
+            components.append(component)
+        
+        return ''.join(components)
+    
+    @classmethod
+    def _format_name(cls, name):
+        """格式化名字（首字母大写）"""
+        return name.capitalize()
     
     @classmethod
     def generate(cls):
         """
-        Genera un nombre latino aleatorio
+        生成随机英文名字
+        Returns:
+            dict: 包含 first_name, last_name, full_name
         """
-        first = random.choice(cls.FIRST_NAMES)
-        last = random.choice(cls.LAST_NAMES)
+        first_name_pattern = random.choice(cls.PATTERNS['first_name'])
+        last_name_pattern = random.choice(cls.PATTERNS['last_name'])
         
-        # A veces agregamos un segundo apellido para más realismo (50% de probabilidad)
-        if random.random() > 0.5:
-            last2 = random.choice(cls.LAST_NAMES)
-            # Evitamos apellidos repetidos (ej. Lopez Lopez)
-            while last2 == last:
-                last2 = random.choice(cls.LAST_NAMES)
-            full_last = f"{last} {last2}"
-        else:
-            full_last = last
-
+        first_name = cls._generate_component(first_name_pattern)
+        last_name = cls._generate_component(last_name_pattern)
+        
         return {
-            'first_name': first,
-            'last_name': full_last,
-            'full_name': f"{first} {full_last}"
+            'first_name': cls._format_name(first_name),
+            'last_name': cls._format_name(last_name),
+            'full_name': f"{cls._format_name(first_name)} {cls._format_name(last_name)}"
         }
-
-def generate_email(school_domain='comunidad.unam.mx'):
-    """
-    Genera un correo con formato de alumno real
-    """
-    chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
-    username = ''.join(random.choice(chars) for _ in range(random.randint(6, 10)))
-    return f"{username}@{school_domain}"
-
-def generate_birth_date():
-    """
-    Genera cumpleaños para alguien de 18-24 años
-    """
-    year = random.randint(2001, 2006)
-    month = str(random.randint(1, 12)).zfill(2)
-    day = str(random.randint(1, 28)).zfill(2)
-    return f"{year}-{month}-{day}"
