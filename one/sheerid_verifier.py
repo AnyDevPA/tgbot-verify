@@ -4,7 +4,6 @@ import random
 import unicodedata
 import re
 import json
-import asyncio
 from . import config
 from .img_generator import generate_image
 from .name_generator import NameGenerator 
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 class SheerIDVerifier:
     def __init__(self, verification_id):
         self.verification_id = verification_id
-        # Headers Chrome Windows
+        # Headers de Chrome Windows (Para no parecer cel)
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
             "Accept": "application/json",
@@ -41,17 +40,18 @@ class SheerIDVerifier:
             first = name_data['first_name']
             last = name_data['last_name']
             
-            # --- CAMBIO IMPORTANTE: USAR EMAIL INSTITUCIONAL FALSO ---
-            # Esto evita el bloqueo inmediato de "fraudRulesReject".
+            # --- GENERACIÓN DE EMAIL ESCOLAR ---
             school = config.SCHOOLS[config.DEFAULT_SCHOOL_ID]
-            domain = school.get('domain', 'westerntech.edu')
+            domain = school.get('domain', 'wgu.edu')
             
-            # Generamos algo como: juan.perez22@westerntech.edu
-            email = self.sanitize_email(f"{first}.{last}{random.randint(10,99)}@{domain}").lower()
+            # Formato: nombre.apellido + numeros @wgu.edu
+            # Esto engaña al filtro de fraude inicial
+            email = self.sanitize_email(f"{first}.{last}{random.randint(10,999)}@{domain}").lower()
             
-            dob = f"200{random.randint(0,5)}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
+            # Edad adulto joven (WGU)
+            dob = f"19{random.randint(90,99)}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
 
-            logger.info(f"🔧 TECH STUDENT: {first} {last} | {email}")
+            logger.info(f"🎓 WGU (Institucional): {first} {last} | {email}")
 
             payload = {
                 "firstName": first,
@@ -63,27 +63,25 @@ class SheerIDVerifier:
                 "metadata": {**config.METADATA, "verificationId": self.verification_id, "refererUrl": f"{config.SHEERID_BASE_URL}/verify/{config.PROGRAM_ID}/"}
             }
             
-            # PASO 1: ENVIAR DATOS
+            # PASO 1
             url_step1 = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/collectStudentPersonalInfo"
             resp1 = self.client.post(url_step1, json=payload)
             data1 = resp1.json()
             current_step = data1.get("currentStep")
 
-            # --- HACK PARA ROMPER EL LOOP ---
+            # --- ROMPER EL EMAIL LOOP ---
             if current_step == "emailLoop":
-                logger.info("⚠️ Entramos al Loop (Código enviado). Intentando saltar a Documentos...")
+                logger.info("🔓 Email aceptado. Rompiendo el Loop para subir foto...")
                 
-                # Intentamos dos métodos para romper el loop:
+                # HACK: Borrar el paso del email para forzar el fallback a documento
+                self.client.delete(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/emailLoop")
                 
-                # Método A: DELETE al endpoint del loop (Simula clic en "Verificar de otra forma")
-                del_resp = self.client.delete(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/emailLoop")
-                
-                # Actualizamos estado
+                # Verificamos dónde caímos
                 status = self.client.get(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}").json()
                 current_step = status.get("currentStep")
-                logger.info(f"Estado post-salto: {current_step}")
+                logger.info(f"Nuevo Estado: {current_step}")
 
-            # Si nos manda a error, es que nos detectaron
+            # Manejo de errores comunes
             if current_step == "error":
                 return {"success": False, "message": f"❌ Error: {data1.get('errorIds')}"}
 
@@ -91,9 +89,8 @@ class SheerIDVerifier:
                  return {"success": True, "pending": False, "redirect_url": data1.get("redirectUrl"), "status": data1}
 
             # PASO 2: SUBIR DOCUMENTO
-            # Si logramos romper el loop, deberíamos estar aquí
             if current_step == "docUpload":
-                logger.info(">> Subiendo Credencial WTC...")
+                logger.info(">> Subiendo Credencial WGU...")
                 img_bytes = generate_image(first, last)
                 
                 url_upload = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/docUpload"
@@ -102,12 +99,13 @@ class SheerIDVerifier:
                 if "documents" in resp2.json():
                     upload_link = resp2.json()["documents"][0]["uploadUrl"]
                     self.client.put(upload_link, content=img_bytes, headers={"Content-Type": "image/jpeg"})
+                    
                     final = self.client.post(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/completeDocUpload").json()
                     return {"success": True, "pending": True, "redirect_url": final.get("redirectUrl"), "status": final}
             
-            # Si seguimos en emailLoop después de intentar borrarlo, estamos jodidos
+            # Si sigue en emailLoop, es que Google parchó este método
             if current_step == "emailLoop":
-                 return {"success": False, "message": "❌ No se pudo salir del Email Loop. Google exige el código."}
+                 return {"success": False, "message": "❌ Google no deja saltar la verificación por correo (Loop Bloqueado)."}
 
             return {"success": False, "message": f"Estado desconocido: {current_step}"}
 
