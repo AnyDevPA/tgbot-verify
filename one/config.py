@@ -1,30 +1,24 @@
-# SheerID 验证配置文件 (Google One / Gemini)
+# one/config.py - MODO USA
 
-# SheerID API 配置 - ESTE ID ES EL DE GOOGLE, NO LO CAMBIES
+# ID del Programa Google One
 PROGRAM_ID = '67c8c14f5f17a83b745e3f82'
 SHEERID_BASE_URL = 'https://services.sheerid.com'
-MY_SHEERID_URL = 'https://my.sheerid.com'
 
-# 文件大小限制
-MAX_FILE_SIZE = 1 * 1024 * 1024  # 1MB
-
-# USAMOS EL MISMO ID DE LA UNAM QUE YA FUNCIONÓ
-UNAM_ID = 415489
-
+# Pennsylvania State University - Main Campus
 SCHOOLS = {
-    str(UNAM_ID): {
-        'id': UNAM_ID,
-        'idExtended': str(UNAM_ID),
-        'name': 'Universidad Nacional Autónoma De México (UNAM)',
-        'city': 'Coyoacán',
-        'state': 'CDMX',
-        'country': 'MX',
-        'type': 'UNIVERSITY',
-        'domain': 'UNAM.MX',
-        'latitude': 19.332,
-        'longitude': -99.186
+    '2565': {
+        'id': 2565,
+        'name': 'Pennsylvania State University-Main Campus',
+        'city': 'University Park',
+        'state': 'PA',
+        'country': 'US',
+        'type': 'UNIVERSITY'
     }
 }
 
-# Default
-DEFAULT_SCHOOL_ID = str(UNAM_ID)
+DEFAULT_SCHOOL_ID = '2565'
+
+METADATA = {
+    "marketConsentValue": False,
+    "submissionOptIn": "By submitting the personal information above, I acknowledge that my personal information is being collected under the privacy policy."
+}
