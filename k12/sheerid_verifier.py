@@ -4,8 +4,8 @@ import random
 import unicodedata
 from . import config
 from .img_generator import generate_image
-# Usa el generador de nombres de la carpeta utils o el local
-from utils.name_generator import NameGenerator 
+# CORRECCIÓN: Usamos el punto (.) para decir "busca en esta misma carpeta k12"
+from .name_generator import NameGenerator 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,8 +24,6 @@ class SheerIDVerifier:
     def verify(self):
         try:
             # --- DATOS ---
-            # Usamos nombres "Gringos" preferiblemente para escuela de TX, 
-            # pero el latino funciona si el email se limpia.
             name_data = NameGenerator.generate() 
             first = name_data['first_name']
             last = name_data['last_name']
