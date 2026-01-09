@@ -13,8 +13,23 @@ logger = logging.getLogger(__name__)
 class SheerIDVerifier:
     def __init__(self, verification_id):
         self.verification_id = verification_id
-        self.client = httpx.Client(timeout=30.0)
-        # Intentamos un fingerprint más complejo
+        
+        # --- CAMUFLAJE: HEADERS DE CHROME REAL ---
+        self.headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Origin": "https://services.sheerid.com",
+            "Referer": f"https://services.sheerid.com/verify/{config.PROGRAM_ID}/",
+            "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin"
+        }
+        
+        self.client = httpx.Client(headers=self.headers, timeout=30.0)
         self.device_fingerprint = ''.join(random.choices('0123456789abcdef', k=32))
 
     @staticmethod
@@ -33,18 +48,13 @@ class SheerIDVerifier:
             first = name_data['first_name']
             last = name_data['last_name']
             
-            # ESTRATEGIA ANTI-FRAUDE:
-            # 1. Evitar Gmail (muy quemado). Usar Outlook/Yahoo.
-            # 2. Formato más limpio: nombre.apellido@... en lugar de nombre.apellido9999
-            domains = ["outlook.com", "yahoo.com", "icloud.com"]
-            clean_email = f"{first}.{last}@{random.choice(domains)}".lower()
-            email = self.sanitize_email(clean_email)
-            
-            # Fechas realistas para estudiante online (pueden ser mayores)
-            dob = f"19{random.randint(90,99)}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
+            # Usamos Yahoo/Outlook para variar
+            domains = ["yahoo.com", "outlook.com", "aol.com"]
+            email = self.sanitize_email(f"{first}.{last}{random.randint(1,999)}@{random.choice(domains)}").lower()
+            dob = f"19{random.randint(85,99)}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
             school = config.SCHOOLS[config.DEFAULT_SCHOOL_ID]
 
-            logger.info(f"🎓 STUDENT (SNHU): {first} {last} | {email}")
+            logger.info(f"🎓 PHOENIX STUDENT: {first} {last} | {email}")
 
             # PASO 1
             payload = {
@@ -62,11 +72,12 @@ class SheerIDVerifier:
             data1 = resp1.json()
             current_step = data1.get("currentStep")
 
-            # --- DIAGNÓSTICO DE FRAUDE ---
+            # --- MANEJO DE ERRORES ---
             if current_step == "error":
                 error_ids = data1.get("errorIds", [])
                 logger.error(f"❌ RECHAZADO: {error_ids}")
-                return {"success": False, "message": f"SheerID bloqueó la solicitud: {error_ids}"}
+                # Si sigue saliendo fraudRulesReject, es tu IP 100%
+                return {"success": False, "message": f"SheerID Error: {error_ids}"}
 
             if current_step == "emailLoop":
                 self.client.delete(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/emailLoop")
@@ -76,9 +87,9 @@ class SheerIDVerifier:
             if current_step == "success":
                  return {"success": True, "pending": False, "redirect_url": data1.get("redirectUrl"), "status": data1}
 
-            # PASO 2: Subir Credencial SNHU
+            # PASO 2: Subir Credencial
             if current_step == "docUpload":
-                logger.info(">> Subiendo Credencial SNHU...")
+                logger.info(">> Subiendo Credencial Phoenix...")
                 img_bytes = generate_image(first, last)
                 
                 url_upload = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/docUpload"
