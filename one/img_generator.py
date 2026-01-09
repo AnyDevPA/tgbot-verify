@@ -5,9 +5,9 @@ try:
 except ImportError:
     HAS_PLAYWRIGHT = False
 
-def generate_gcu_html(first_name, last_name):
-    """Credencial Grand Canyon University"""
-    gcu_id = f"{random.randint(10000000, 99999999)}"
+def generate_wtc_html(first_name, last_name):
+    """Credencial Western Tech"""
+    wtc_id = f"WT-{random.randint(10000, 99999)}"
     
     html = f"""<!DOCTYPE html>
 <html>
@@ -15,52 +15,44 @@ def generate_gcu_html(first_name, last_name):
 <style>
     body {{ font-family: Arial, sans-serif; background: #fff; margin: 0; padding: 20px; }}
     .card {{
-        width: 350px; height: 220px;
-        background: white;
-        border-radius: 10px;
-        border: 2px solid #522398; /* GCU Purple */
+        width: 360px; height: 230px;
+        background: #fff;
+        border: 2px solid #E35205; /* Tech Orange */
+        border-radius: 8px;
         position: relative;
-        overflow: hidden;
     }}
     .header {{
-        background: #522398;
-        height: 50px;
+        background: #E35205;
+        height: 40px;
         display: flex; align-items: center; justify-content: center;
-        color: white; font-weight: bold; font-size: 18px; letter-spacing: 1px;
+        color: white; font-weight: bold; font-size: 16px;
     }}
-    .content {{ display: flex; padding: 15px; }}
     .photo {{
-        width: 90px; height: 110px; background: #eee;
-        border: 2px solid #522398;
+        position: absolute; top: 60px; left: 20px;
+        width: 100px; height: 120px;
+        background: #333;
         display: flex; align-items: center; justify-content: center;
-        font-size: 10px; color: #555;
+        color: white; font-size: 10px;
     }}
-    .info {{ margin-left: 15px; width: 200px; }}
-    .name {{ font-size: 18px; font-weight: bold; text-transform: uppercase; color: #000; margin-bottom: 5px; }}
-    .role {{ color: #555; font-size: 14px; margin-bottom: 15px; font-weight: bold; }}
-    .id-block {{ font-size: 12px; color: #333; }}
+    .info {{ position: absolute; top: 60px; left: 140px; width: 200px; }}
+    .name {{ font-size: 18px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }}
+    .program {{ font-size: 12px; color: #666; margin-bottom: 20px; }}
     .footer {{
-        position: absolute; bottom: 0; width: 100%; height: 20px;
-        background: #000; color: white; text-align: center;
-        font-size: 9px; line-height: 20px;
+        position: absolute; bottom: 10px; width: 100%;
+        text-align: center; font-size: 10px; font-weight: bold; color: #333;
     }}
 </style>
 </head>
 <body>
     <div class="card">
-        <div class="header">GRAND CANYON UNIVERSITY</div>
-        <div class="content">
-            <div class="photo">GCU<br>STUDENT</div>
-            <div class="info">
-                <div class="name">{first_name}<br>{last_name}</div>
-                <div class="role">UNDERGRADUATE</div>
-                <div class="id-block">
-                    CAMPUS ID: {gcu_id}<br>
-                    VALID THRU: 05/2026
-                </div>
-            </div>
+        <div class="header">Western Technical College</div>
+        <div class="photo">STUDENT</div>
+        <div class="info">
+            <div class="name">{first_name}<br>{last_name}</div>
+            <div class="program">Occupational Studies</div>
+            <div>ID: {wtc_id}</div>
         </div>
-        <div class="footer">Lopes Up!</div>
+        <div class="footer">EL PASO, TEXAS</div>
     </div>
 </body>
 </html>"""
@@ -69,7 +61,7 @@ def generate_gcu_html(first_name, last_name):
 def generate_image(first_name, last_name, school_id='999'):
     if not HAS_PLAYWRIGHT: return b""
     try:
-        html = generate_gcu_html(first_name, last_name)
+        html = generate_wtc_html(first_name, last_name)
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page(viewport={'width': 400, 'height': 300})
