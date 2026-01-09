@@ -5,65 +5,62 @@ try:
 except ImportError:
     HAS_PLAYWRIGHT = False
 
-def generate_psu_html(first_name, last_name):
-    """Credencial Penn State University"""
-    id_num = f"9{random.randint(10000000, 99999999)}"
+def generate_asu_html(first_name, last_name):
+    """Credencial Arizona State University"""
+    # ID de ASU suele ser 10 dígitos o 9
+    asu_id = f"{random.randint(1000000000, 1299999999)}"
     
     html = f"""<!DOCTYPE html>
 <html>
 <head>
 <style>
-    body {{ font-family: Arial, sans-serif; background: #fff; margin: 0; padding: 20px; }}
+    body {{ font-family: sans-serif; background: #fff; margin: 0; padding: 20px; }}
     .card {{
         width: 350px; height: 220px;
-        border: 1px solid #ddd;
-        border-radius: 10px;
+        border-radius: 12px;
+        background: #8C1D40; /* ASU Maroon */
         position: relative;
-        background: white;
+        color: white;
         overflow: hidden;
+        border: 1px solid #666;
     }}
     .header {{
-        background-color: #001E44; /* PSU Blue */
-        height: 50px;
-        display: flex; align-items: center; justify-content: center;
+        position: absolute; top: 15px; left: 15px;
+        font-weight: bold; font-size: 14px; text-transform: uppercase;
+        letter-spacing: 1px;
     }}
-    .header-text {{ color: white; font-weight: bold; font-size: 18px; letter-spacing: 1px; }}
-    .content {{ display: flex; padding: 15px; }}
+    .gold-bar {{
+        position: absolute; top: 45px; left: 0; width: 100%; height: 20px;
+        background: #FFC627; /* ASU Gold */
+    }}
     .photo {{
-        width: 90px; height: 110px; background: #eee; border: 2px solid #001E44;
-        display: flex; align-items: center; justify-content: center; font-size: 10px; color: #888;
+        position: absolute; top: 75px; left: 15px;
+        width: 90px; height: 110px; background: #ddd; border: 2px solid white;
+        display: flex; align-items: center; justify-content: center; color: #555; font-size: 10px;
     }}
-    .details {{ margin-left: 15px; font-size: 12px; color: #333; }}
-    .name {{ font-size: 16px; font-weight: bold; text-transform: uppercase; color: #000; margin-bottom: 5px; }}
-    .id-row {{ margin-top: 10px; font-weight: bold; font-size: 14px; color: #001E44; }}
+    .info {{
+        position: absolute; top: 80px; left: 120px;
+    }}
+    .name {{ font-size: 18px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }}
+    .role {{ font-size: 12px; font-weight: normal; margin-bottom: 15px; }}
+    .id-num {{ font-family: monospace; font-size: 14px; letter-spacing: 1px; }}
     .footer {{
-        position: absolute; bottom: 0; width: 100%; height: 30px;
-        background: #001E44; color: white; text-align: center; line-height: 30px; font-size: 10px;
-    }}
-    .logo-placeholder {{
-        position: absolute; top: 60px; right: 20px;
-        width: 50px; height: 50px; border-radius: 50%;
-        background: #ddd; opacity: 0.5;
+        position: absolute; bottom: 10px; right: 15px;
+        font-size: 10px; font-weight: bold;
     }}
 </style>
 </head>
 <body>
     <div class="card">
-        <div class="header">
-            <div class="header-text">PENN STATE</div>
+        <div class="header">Arizona State University</div>
+        <div class="gold-bar"></div>
+        <div class="photo">PHOTO</div>
+        <div class="info">
+            <div class="name">{first_name}<br>{last_name}</div>
+            <div class="role">STUDENT</div>
+            <div class="id-num">{asu_id}</div>
         </div>
-        <div class="logo-placeholder"></div>
-        <div class="content">
-            <div class="photo">STUDENT<br>PHOTO</div>
-            <div class="details">
-                <div class="name">{first_name}<br>{last_name}</div>
-                <div>Undergraduate Student</div>
-                <div>University Park</div>
-                <div class="id-row">ID: {id_num}</div>
-                <div style="margin-top:5px;">Exp: 05/2026</div>
-            </div>
-        </div>
-        <div class="footer">PennState id+ Card</div>
+        <div class="footer">SUN CARD</div>
     </div>
 </body>
 </html>"""
@@ -72,7 +69,7 @@ def generate_psu_html(first_name, last_name):
 def generate_image(first_name, last_name, school_id='999'):
     if not HAS_PLAYWRIGHT: return b""
     try:
-        html = generate_psu_html(first_name, last_name)
+        html = generate_asu_html(first_name, last_name)
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page(viewport={'width': 400, 'height': 300})
