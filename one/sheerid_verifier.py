@@ -3,6 +3,8 @@ import httpx
 import random
 import unicodedata
 import re
+import json
+import asyncio
 from . import config
 from .img_generator import generate_image
 from .name_generator import NameGenerator 
@@ -13,12 +15,23 @@ logger = logging.getLogger(__name__)
 class SheerIDVerifier:
     def __init__(self, verification_id):
         self.verification_id = verification_id
-        # Headers anti-bot
+        
+        # --- 🕵️‍♂️ MODO CAMUFLAJE: HEADERS DE CHROME REAL ---
+        # Esto hace que SheerID crea que eres una persona en Windows, no un bot.
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "application/json",
-            "Referer": f"https://services.sheerid.com/verify/{config.PROGRAM_ID}/"
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Origin": "https://services.sheerid.com",
+            "Referer": f"https://services.sheerid.com/verify/{config.PROGRAM_ID}/",
+            "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin"
         }
+        
         self.client = httpx.Client(headers=self.headers, timeout=30.0)
         self.device_fingerprint = ''.join(random.choices('0123456789abcdef', k=32))
 
@@ -38,18 +51,21 @@ class SheerIDVerifier:
             first = name_data['first_name']
             last = name_data['last_name']
             
-            # Generar datos "Joven Universitario" (19-23 años)
-            # GCU suele aceptar mejor este rango para ofertas de Student
-            current_year = 2024
-            birth_year = current_year - random.randint(19, 23)
-            dob = f"{birth_year}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
+            # WGU es para adultos que trabajan. Generamos edad entre 22 y 40 años.
+            dob = f"19{random.randint(84,99)}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
             
             school = config.SCHOOLS[config.DEFAULT_SCHOOL_ID]
             
-            # Primer intento con Outlook
-            email = self.sanitize_email(f"{first}.{last}{random.randint(1,999)}@outlook.com").lower()
+            # Emails "Serios" (Outlook/Yahoo) para parecer estudiante adulto
+            patterns = [
+                f"{first}.{last}.edu@outlook.com",
+                f"{first}_{last}_official@yahoo.com",
+                f"{last}.{first}88@aol.com",
+                f"{first}{last}.work@outlook.com"
+            ]
+            email = self.sanitize_email(random.choice(patterns)).lower()
 
-            logger.info(f"🎓 GCU STUDENT: {first} {last} | {dob} | {email}")
+            logger.info(f"🎓 WGU STUDENT: {first} {last} | {email}")
 
             payload = {
                 "firstName": first,
@@ -61,35 +77,42 @@ class SheerIDVerifier:
                 "metadata": {**config.METADATA, "verificationId": self.verification_id, "refererUrl": f"{config.SHEERID_BASE_URL}/verify/{config.PROGRAM_ID}/"}
             }
             
+            # --- PASO 1: ENVIAR DATOS ---
             url_step1 = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/collectStudentPersonalInfo"
             resp1 = self.client.post(url_step1, json=payload)
             data1 = resp1.json()
             current_step = data1.get("currentStep")
 
-            # --- LÓGICA DE REINTENTO ---
-            # Si se queda en el mismo paso (bucle), probamos con Gmail
+            # --- MANEJO DE ATASCOS (Retry) ---
+            # Si SheerID recarga la página sin dar error, probamos con un Gmail simple
             if current_step == "collectStudentPersonalInfo":
-                logger.info("⚠️ Bucle detectado. Reintentando con Gmail...")
-                payload["email"] = self.sanitize_email(f"{first}{last}{random.randint(100,999)}@gmail.com").lower()
+                logger.info("⚠️ Formulario recargado. Reintentando con Gmail simple...")
+                payload["email"] = self.sanitize_email(f"{first}{last}{random.randint(10,99)}@gmail.com").lower()
+                # Pequeña pausa para parecer humano
+                import time; time.sleep(2)
                 resp1 = self.client.post(url_step1, json=payload)
                 data1 = resp1.json()
                 current_step = data1.get("currentStep")
 
-            # Manejo de Email Loop
+            # --- MANEJO DE ERRORES ---
+            if current_step == "error":
+                error_ids = data1.get("errorIds", [])
+                logger.error(f"❌ RECHAZADO: {error_ids}")
+                return {"success": False, "message": f"Rechazado por SheerID: {error_ids}"}
+
+            # --- MANEJO DE LOOP DE EMAIL ---
             if current_step == "emailLoop":
+                logger.info("⚠️ Email Loop detectado. Saltando...")
                 self.client.delete(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/emailLoop")
                 status = self.client.get(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}").json()
                 current_step = status.get("currentStep")
 
-            if current_step == "error":
-                return {"success": False, "message": f"SheerID Error: {data1.get('errorIds')}"}
-
             if current_step == "success":
                  return {"success": True, "pending": False, "redirect_url": data1.get("redirectUrl"), "status": data1}
 
-            # PASO 2: Subir Credencial GCU
+            # --- PASO 2: SUBIR DOCUMENTO ---
             if current_step == "docUpload":
-                logger.info(">> Subiendo Credencial GCU...")
+                logger.info(">> Subiendo Credencial WGU...")
                 img_bytes = generate_image(first, last)
                 
                 url_upload = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/docUpload"
@@ -102,7 +125,7 @@ class SheerIDVerifier:
                     final = self.client.post(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/completeDocUpload").json()
                     return {"success": True, "pending": True, "redirect_url": final.get("redirectUrl"), "status": final}
             
-            return {"success": False, "message": f"Estado atorado: {current_step}"}
+            return {"success": False, "message": f"Estado desconocido: {current_step}. Respuesta: {json.dumps(data1)}"}
 
         except Exception as e:
             return {"success": False, "message": str(e)}
