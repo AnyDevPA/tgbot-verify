@@ -1,21 +1,22 @@
-# one/config.py - MODO GCU (Grand Canyon)
+# one/config.py - MODO WGU (ID CONFIRMADO 3919)
 
 PROGRAM_ID = '67c8c14f5f17a83b745e3f82'
 SHEERID_BASE_URL = 'https://services.sheerid.com'
 
-# Grand Canyon University (ID: 1761)
+# Western Governors University (Salt Lake City, UT)
+# ID CONFIRMADO POR F12: 3919
 SCHOOLS = {
-    '1761': {
-        'id': 1761,
-        'name': 'Grand Canyon University',
-        'city': 'Phoenix',
-        'state': 'AZ',
+    '3919': {
+        'id': 3919,
+        'name': 'Western Governors University (Salt Lake City, UT)',
+        'city': 'Salt Lake City',
+        'state': 'UT',
         'country': 'US',
         'type': 'UNIVERSITY'
     }
 }
 
-DEFAULT_SCHOOL_ID = '1761'
+DEFAULT_SCHOOL_ID = '3919'
 
 METADATA = {
     "marketConsentValue": False,
