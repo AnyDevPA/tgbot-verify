@@ -1,22 +1,21 @@
-# one/config.py - MODO SNHU (Online Friendly)
+# one/config.py - MODO PHOENIX (Stealth)
 
 PROGRAM_ID = '67c8c14f5f17a83b745e3f82'
 SHEERID_BASE_URL = 'https://services.sheerid.com'
 
-# Southern New Hampshire University (SNHU)
-# ID: 3578 (Suele funcionar bien para online)
+# University of Phoenix (ID: 4147)
 SCHOOLS = {
-    '3578': {
-        'id': 3578,
-        'name': 'Southern New Hampshire University',
-        'city': 'Manchester',
-        'state': 'NH',
+    '4147': {
+        'id': 4147,
+        'name': 'University of Phoenix',
+        'city': 'Phoenix',
+        'state': 'AZ',
         'country': 'US',
         'type': 'UNIVERSITY'
     }
 }
 
-DEFAULT_SCHOOL_ID = '3578'
+DEFAULT_SCHOOL_ID = '4147'
 
 METADATA = {
     "marketConsentValue": False,
