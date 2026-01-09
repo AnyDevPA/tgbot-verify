@@ -28,19 +28,18 @@ class SheerIDVerifier:
 
     def verify(self):
         try:
-            # Generar nombre GRINGO
             name_data = NameGenerator.generate() 
             first = name_data['first_name']
             last = name_data['last_name']
             
-            # Usar GMAIL para evitar que pidan loguearse en el portal de la uni
-            email = f"{first}.{last}{random.randint(11,99)}@gmail.com".lower()
+            # Gmail para forzar subida de documento
+            email = self.sanitize_email(f"{first}.{last}{random.randint(11,99)}@gmail.com").lower()
             dob = f"200{random.randint(0,5)}-{random.randint(1,12):02d}-{random.randint(1,28):02d}"
             school = config.SCHOOLS[config.DEFAULT_SCHOOL_ID]
 
-            logger.info(f"🎓 STUDENT (USA): {first} {last} | {school['name']}")
+            logger.info(f"🎓 STUDENT (ASU): {first} {last} | {school['name']}")
 
-            # PASO 1: Enviar Datos
+            # PASO 1
             payload = {
                 "firstName": first,
                 "lastName": last,
@@ -53,15 +52,18 @@ class SheerIDVerifier:
             
             url_step1 = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/collectStudentPersonalInfo"
             resp1 = self.client.post(url_step1, json=payload)
-            
-            if resp1.status_code != 200:
-                 raise Exception(f"Error Datos: {resp1.text}")
-
             data1 = resp1.json()
             current_step = data1.get("currentStep")
 
-            # Manejo de Email Loop (Si Google se pone pesado)
+            # --- MANEJO DE ERRORES DETALLADO ---
+            if current_step == "error":
+                error_ids = data1.get("errorIds", [])
+                logger.error(f"❌ Error en Paso 1: {error_ids}")
+                return {"success": False, "message": f"SheerID rechazó los datos: {error_ids}"}
+
+            # Si sale emailLoop, intentamos escapar
             if current_step == "emailLoop":
+                logger.info("⚠️ Email Loop detectado. Intentando saltar...")
                 self.client.delete(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/emailLoop")
                 status = self.client.get(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}").json()
                 current_step = status.get("currentStep")
@@ -69,9 +71,9 @@ class SheerIDVerifier:
             if current_step == "success":
                  return {"success": True, "pending": False, "redirect_url": data1.get("redirectUrl"), "status": data1}
 
-            # PASO 2: Subir Credencial PSU
+            # PASO 2: Subir Credencial
             if current_step == "docUpload":
-                logger.info(">> Subiendo Credencial PSU...")
+                logger.info(">> Subiendo Credencial ASU...")
                 img_bytes = generate_image(first, last)
                 
                 url_upload = f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/docUpload"
@@ -84,7 +86,7 @@ class SheerIDVerifier:
                     final = self.client.post(f"{config.SHEERID_BASE_URL}/rest/v2/verification/{self.verification_id}/step/completeDocUpload").json()
                     return {"success": True, "pending": True, "redirect_url": final.get("redirectUrl"), "status": final}
             
-            return {"success": False, "message": f"Estado desconocido: {current_step}"}
+            return {"success": False, "message": f"Estado desconocido: {current_step} - {data1}"}
 
         except Exception as e:
             return {"success": False, "message": str(e)}
