@@ -1,75 +1,120 @@
-"""教师证明文档生成（PDF + PNG）"""
 import random
 from datetime import datetime
-from io import BytesIO
-from pathlib import Path
+import io
 
-from xhtml2pdf import pisa
+try:
+    import numpy as np
+    from PIL import Image, ImageFilter, ImageEnhance
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
 
-
-def _render_template(first_name: str, last_name: str) -> str:
-    """读取模板，替换姓名/工号/日期，并展开 CSS 变量。"""
-    full_name = f"{first_name} {last_name}"
-    employee_id = random.randint(1000000, 9999999)
-    current_date = datetime.now().strftime("%m/%d/%Y %I:%M %p")
-
-    template_path = Path(__file__).parent / "card-temp.html"
-    html = template_path.read_text(encoding="utf-8")
-
-    # 展开 CSS 变量，兼容 xhtml2pdf
-    color_map = {
-        "var(--primary-blue)": "#0056b3",
-        "var(--border-gray)": "#dee2e6",
-        "var(--bg-gray)": "#f8f9fa",
-    }
-    for placeholder, color in color_map.items():
-        html = html.replace(placeholder, color)
-
-    # 替换示例姓名 / 员工号 / 日期（模板里出现两处姓名 + span）
-    html = html.replace("Sarah J. Connor", full_name)
-    html = html.replace("E-9928104", f"E-{employee_id}")
-    html = html.replace('id="currentDate"></span>', f'id="currentDate">{current_date}</span>')
-
+def generate_teacher_id_html(first_name, last_name):
+    """Genera un Gafete de Maestro (Teacher ID)"""
+    school_name = "AUSTIN HIGH SCHOOL"
+    school_year = "2025 - 2026"
+    staff_id = f"T-{random.randint(10000, 99999)}"
+    
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+<style>
+    body {{ font-family: sans-serif; background: #fff; margin: 0; padding: 20px; }}
+    .badge {{
+        width: 350px; height: 550px;
+        border: 2px solid #000;
+        border-radius: 15px;
+        position: relative;
+        text-align: center;
+        background: linear-gradient(180deg, #800000 0%, #800000 15%, #ffffff 15%, #ffffff 100%);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }}
+    .header {{ color: white; font-weight: bold; font-size: 22px; padding-top: 20px; letter-spacing: 1px; }}
+    .photo-box {{
+        width: 180px; height: 220px;
+        background-color: #ddd;
+        margin: 40px auto 20px;
+        border: 3px solid #333;
+        display: flex; align-items: center; justify-content: center;
+        color: #666; font-size: 10px;
+    }}
+    .name {{ font-size: 26px; font-weight: 900; color: #000; text-transform: uppercase; margin-bottom: 5px; }}
+    .title {{ font-size: 18px; color: #800000; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }}
+    .meta {{ margin-top: 20px; font-size: 14px; color: #333; }}
+    .barcode {{
+        margin-top: 30px; height: 40px; background: #000; width: 80%; margin-left: 10%;
+        mask: repeating-linear-gradient(90deg, transparent, transparent 2px, #000 2px, #000 4px);
+    }}
+    .footer {{ position: absolute; bottom: 15px; width: 100%; font-size: 10px; color: #666; }}
+    .year-badge {{
+        position: absolute; top: 100px; right: 20px;
+        background: #D4AF37; color: black; padding: 5px 10px;
+        font-weight: bold; border-radius: 50%; transform: rotate(15deg);
+        border: 2px solid white; box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    }}
+</style>
+</head>
+<body>
+    <div class="badge">
+        <div class="header">AUSTIN MAROONS</div>
+        
+        <div class="year-badge">STAFF<br>25-26</div>
+        
+        <div class="photo-box">
+            [ PHOTO ]
+        </div>
+        
+        <div class="name">{first_name}<br>{last_name}</div>
+        <div class="title">FACULTY / TEACHER</div>
+        
+        <div class="meta">
+            ID: {staff_id}<br>
+            DEPT: SCIENCE
+        </div>
+        
+        <div class="barcode"></div>
+        
+        <div class="footer">
+            {school_name}<br>
+            1715 W Cesar Chavez St, Austin, TX
+        </div>
+    </div>
+</body>
+</html>"""
     return html
 
+def make_it_look_scanned(image_bytes):
+    """Filtro de foto de gafete real"""
+    if not HAS_PIL: return image_bytes
+    try:
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        # Ruido y desenfoque ligero
+        arr = np.array(img)
+        noise = np.random.normal(0, 5, arr.shape)
+        img = Image.fromarray(np.clip(arr + noise, 0, 255).astype(np.uint8))
+        img = img.filter(ImageFilter.GaussianBlur(radius=0.3))
+        # Guardar
+        out = io.BytesIO()
+        img.save(out, format='JPEG', quality=85)
+        return out.getvalue()
+    except:
+        return image_bytes
 
-def generate_teacher_pdf(first_name: str, last_name: str) -> bytes:
-    """生成教师证明 PDF 文档字节。"""
-    html = _render_template(first_name, last_name)
-
-    output = BytesIO()
-    pisa_status = pisa.CreatePDF(html, dest=output, encoding="utf-8")
-    if pisa_status.err:
-        raise Exception("PDF 生成失败")
-
-    pdf_data = output.getvalue()
-    output.close()
-    return pdf_data
-
-
-def generate_teacher_png(first_name: str, last_name: str) -> bytes:
-    """使用 Playwright 截图生成 PNG（需要 playwright + chromium 已安装）。"""
+def generate_image(first_name, last_name, school_id='999'):
     try:
         from playwright.sync_api import sync_playwright
-    except ImportError as exc:
-        raise RuntimeError(
-            "需要安装 playwright，请执行 `pip install playwright` 然后 `playwright install chromium`"
-        ) from exc
+        html = generate_teacher_id_html(first_name, last_name)
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={'width': 400, 'height': 600})
+            page.set_content(html, wait_until='load')
+            page.wait_for_timeout(200)
+            ss = page.screenshot(type='png', full_page=True)
+            browser.close()
+        return make_it_look_scanned(ss)
+    except Exception as e:
+        raise Exception(f"Error generando Teacher ID: {e}")
 
-    html = _render_template(first_name, last_name)
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 1200, "height": 1000})
-        page.set_content(html, wait_until="load")
-        page.wait_for_timeout(500)  # 让样式稳定
-        card = page.locator(".browser-mockup")
-        png_bytes = card.screenshot(type="png")
-        browser.close()
-
-    return png_bytes
-
-
-# 兼容旧调用：默认生成 PDF
-def generate_teacher_image(first_name: str, last_name: str) -> bytes:
-    return generate_teacher_pdf(first_name, last_name)
+# Compatibilidad
+def generate_psu_id(): return "000"
+def generate_psu_email(f, l): return f"{f[0]}{l}@austinisd.org"
